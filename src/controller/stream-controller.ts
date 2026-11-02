@@ -17,6 +17,7 @@ import {
   removeEventListener,
 } from '../utils/event-listener-helper';
 import { useAlternateAudio } from '../utils/rendition-helper';
+import { copyTimestampOffsets } from '../utils/timescale-conversion';
 import {
   userAgentFirefoxVersion,
   userAgentIsAndroidLike,
@@ -691,11 +692,10 @@ export default class StreamController
     }
 
     // Remove timestamp mapping from sparse array for discontinuities no longer present
-    this.initPTS.some((t, i) => {
-      if (i >= newDetails.startCC) {
-        return true;
+    Object.keys(this.initPTS).forEach((cc) => {
+      if (+cc < newDetails.startCC) {
+        delete this.initPTS[+cc];
       }
-      delete this.initPTS[i];
     });
 
     // trigger handler right now
@@ -1281,7 +1281,7 @@ export default class StreamController
           timescale,
           trackId,
         };
-        const timestampOffsets = this.initPTS.slice(0);
+        const timestampOffsets = copyTimestampOffsets(this.initPTS);
         hls.trigger(Events.INIT_PTS_FOUND, {
           timestampOffsets,
           frag,

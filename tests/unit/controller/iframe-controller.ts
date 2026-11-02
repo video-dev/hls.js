@@ -186,22 +186,34 @@ describe('IFrameController', function () {
     expect(iframePlayer.levels[0].pathwayId).to.eq('..');
   });
 
-  it('passes copy of initPTS to a newly created IFramePlayer', function () {
+  it('passes a copy of initPTS to a newly created IFramePlayer without iterating sparse indices', function () {
     loadManifest(playlistWithIFrameVariants);
-    const timestamps: TimestampOffset[] = [
-      { baseTime: 900000, timescale: 90000, trackId: 0 },
-    ];
+    const timestamps: TimestampOffset[] = [];
+    const offset = { baseTime: 900000, timescale: 90000, trackId: 0 };
+    timestamps[1000000] = offset;
+    const visited: number[] = [];
+    const sparseTimestamps = new Proxy(timestamps, {
+      has(target, key) {
+        if (typeof key === 'string' && /^\d+$/.test(key)) {
+          visited.push(+key);
+        }
+        return key in target;
+      },
+    });
     hls.trigger(Events.INIT_PTS_FOUND, {
       id: PlaylistLevelType.MAIN,
-      timestampOffsets: timestamps,
+      timestampOffsets: sparseTimestamps,
       frag: { cc: 0 } as any,
       initPTS: 900000,
       timescale: 90000,
     });
     const iframePlayer = iframeController.createIFramePlayer();
     const iframeStreamController = (iframePlayer as any).streamController;
-    expect(iframeStreamController.initPTS).to.not.equal(timestamps);
-    expect(iframeStreamController.initPTS).to.deep.equal(timestamps);
+    const iframeInitPTS = iframeStreamController.initPTS;
+    expect(iframeInitPTS).to.not.equal(timestamps);
+    expect(iframeInitPTS[1000000]).to.equal(offset);
+    expect(iframeInitPTS.length).to.equal(1000001);
+    expect(visited, 'sparse indices visited').to.be.empty;
   });
 
   it('flushes buffer beyond the target and signals EOS before seeking on fragment buffered', function () {
