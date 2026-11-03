@@ -191,13 +191,19 @@ describe('IFrameController', function () {
     const timestamps: TimestampOffset[] = [];
     const offset = { baseTime: 900000, timescale: 90000, trackId: 0 };
     timestamps[1000000] = offset;
-    const visited: number[] = [];
+    const enumerated: string[] = [];
+    const indexChecks: PropertyKey[] = [];
     const sparseTimestamps = new Proxy(timestamps, {
-      has(target, key) {
-        if (typeof key === 'string' && /^\d+$/.test(key)) {
-          visited.push(+key);
+      getOwnPropertyDescriptor(target, key) {
+        const descriptor = Reflect.getOwnPropertyDescriptor(target, key);
+        if (descriptor?.enumerable) {
+          enumerated.push(String(key));
         }
-        return key in target;
+        return descriptor;
+      },
+      has(target, key) {
+        indexChecks.push(key);
+        return Reflect.has(target, key);
       },
     });
     hls.trigger(Events.INIT_PTS_FOUND, {
@@ -213,7 +219,11 @@ describe('IFrameController', function () {
     expect(iframeInitPTS).to.not.equal(timestamps);
     expect(iframeInitPTS[1000000]).to.equal(offset);
     expect(iframeInitPTS.length).to.equal(1000001);
-    expect(visited, 'sparse indices visited').to.be.empty;
+    expect(enumerated, 'existing entries enumerated').to.deep.equal([
+      '1000000',
+    ]);
+    expect(indexChecks, 'array index existence checks (HasProperty)').to.be
+      .empty;
   });
 
   it('flushes buffer beyond the target and signals EOS before seeking on fragment buffered', function () {

@@ -44,9 +44,9 @@ export function copyTimestampOffsets(
   timestampOffsets: TimestampOffset[],
 ): TimestampOffset[] {
   const copy: TimestampOffset[] = [];
-  Object.keys(timestampOffsets).forEach((cc) => {
-    copy[+cc] = timestampOffsets[+cc];
-  });
+  for (const cc in timestampOffsets) {
+    copy[cc] = timestampOffsets[cc];
+  }
   return copy;
 }
 

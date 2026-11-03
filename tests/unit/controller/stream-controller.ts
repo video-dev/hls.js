@@ -224,13 +224,19 @@ describe('StreamController', function () {
       const current = { baseTime: 0, timescale: 1, trackId: 0 };
       initPTS[startCC] = current;
       initPTS[1] = { baseTime: 0, timescale: 1, trackId: 0 };
-      const visited: number[] = [];
+      const enumerated: string[] = [];
+      const indexChecks: PropertyKey[] = [];
       streamController['initPTS'] = new Proxy(initPTS, {
-        has(target, key) {
-          if (typeof key === 'string' && /^\d+$/.test(key)) {
-            visited.push(+key);
+        getOwnPropertyDescriptor(target, key) {
+          const descriptor = Reflect.getOwnPropertyDescriptor(target, key);
+          if (descriptor?.enumerable) {
+            enumerated.push(String(key));
           }
-          return key in target;
+          return descriptor;
+        },
+        has(target, key) {
+          indexChecks.push(key);
+          return Reflect.has(target, key);
         },
       });
 
@@ -256,7 +262,12 @@ describe('StreamController', function () {
 
       expect(initPTS[startCC]).to.equal(current);
       expect(initPTS[1]).to.be.undefined;
-      expect(visited, 'sparse indices visited').to.be.empty;
+      expect(enumerated, 'existing entries enumerated').to.deep.equal([
+        '1',
+        String(startCC),
+      ]);
+      expect(indexChecks, 'array index existence checks (HasProperty)').to.be
+        .empty;
     });
   });
 
