@@ -31,6 +31,7 @@ import type { MediaFragment } from '../../../src/loader/fragment';
 import type { ParsedMultivariantPlaylist } from '../../../src/loader/m3u8-parser';
 import type { BufferAppendedData, ErrorData } from '../../../src/types/events';
 import type { LevelAttributes } from '../../../src/types/level';
+import type { TimestampOffset } from '../../../src/utils/timescale-conversion';
 
 use(sinonChai);
 
@@ -212,6 +213,61 @@ describe('StreamController', function () {
       expect(streamController['startPosition']).to.equal(18);
       expect(streamController['nextLoadPosition']).to.equal(18);
       expect(streamController['lastCurrentTime']).to.equal(18);
+    });
+
+    it('removes stale initPTS entries without iterating sparse indices', function () {
+      loadManifest(`#EXTM3U
+  #EXT-X-STREAM-INF:PROGRAM-ID=1,BANDWIDTH=836280,RESOLUTION=848x360,NAME="480"
+  http://www.example.com/media.m3u8`);
+      const startCC = 1000000;
+      const initPTS: TimestampOffset[] = [];
+      const current = { baseTime: 0, timescale: 1, trackId: 0 };
+      initPTS[startCC] = current;
+      initPTS[1] = { baseTime: 0, timescale: 1, trackId: 0 };
+      const enumerated: string[] = [];
+      const indexChecks: PropertyKey[] = [];
+      streamController['initPTS'] = new Proxy(initPTS, {
+        getOwnPropertyDescriptor(target, key) {
+          const descriptor = Reflect.getOwnPropertyDescriptor(target, key);
+          if (descriptor?.enumerable) {
+            enumerated.push(String(key));
+          }
+          return descriptor;
+        },
+        has(target, key) {
+          indexChecks.push(key);
+          return Reflect.has(target, key);
+        },
+      });
+
+      const details = new LevelDetails('');
+      details.live = false;
+      details.totalduration = 200;
+      details.fragments.push({} as any);
+      details.startCC = startCC;
+      hls.trigger(Events.LEVEL_LOADED, {
+        details,
+        id: 0,
+        level: 0,
+        networkDetails: new Response('ok'),
+        stats: new LoadStats(),
+        deliveryDirectives: null,
+        levelInfo: new Level({
+          name: '',
+          url: '',
+          attrs,
+          bitrate: 500000,
+        }),
+      });
+
+      expect(initPTS[startCC]).to.equal(current);
+      expect(initPTS[1]).to.be.undefined;
+      expect(enumerated, 'existing entries enumerated').to.deep.equal([
+        '1',
+        String(startCC),
+      ]);
+      expect(indexChecks, 'array index existence checks (HasProperty)').to.be
+        .empty;
     });
   });
 
