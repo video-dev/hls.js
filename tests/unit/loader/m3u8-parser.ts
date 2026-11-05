@@ -2489,6 +2489,62 @@ media_1638278.m4s`;
     }
   });
 
+  it('applies a KEY with a new KEYFORMAT only to the segments that follow it', function () {
+    const level = `#EXTM3U
+#EXT-X-VERSION:6
+#EXT-X-TARGETDURATION:6
+#EXT-X-KEY:METHOD=SAMPLE-AES,URI="skd://a",KEYFORMAT="com.apple.streamingkeydelivery",KEYFORMATVERSIONS="1"
+#EXT-X-MAP:URI="init.mp4"
+#EXTINF:5.5,
+1.mp4
+#EXTINF:5.0,
+2.mp4
+#EXT-X-KEY:METHOD=SAMPLE-AES,URI="data:text/plain;base64,YQo=",KEYFORMAT="urn:uuid:edef8ba9-79d6-4ace-a3c8-27dcd51d21ed",KEYFORMATVERSIONS="1"
+#EXTINF:5.5,
+3.mp4
+#EXTINF:5.0,
+4.mp4
+#EXT-X-ENDLIST`;
+    const result = M3U8Parser.parseLevelPlaylist(
+      level,
+      'http://foo.com/adaptive/test.m3u8',
+      0,
+      PlaylistLevelType.MAIN,
+      0,
+      null,
+    );
+    expect(result.playlistParsingError).to.be.null;
+    expect(result.fragments.length).to.equal(4);
+    expect(
+      result.fragments[0].initSegment?.levelkeys,
+      'init segment has one key',
+    )
+      .to.be.an('object')
+      .with.keys(['com.apple.streamingkeydelivery']);
+    expect(result.fragments[0].levelkeys, 'first segment has one key')
+      .to.be.an('object')
+      .with.keys(['com.apple.streamingkeydelivery']);
+    expect(result.fragments[1].levelkeys, 'second segment has one key')
+      .to.be.an('object')
+      .with.keys(['com.apple.streamingkeydelivery']);
+    expect(result.fragments[2].levelkeys, 'third segment has two keys')
+      .to.be.an('object')
+      .with.keys([
+        'com.apple.streamingkeydelivery',
+        'urn:uuid:edef8ba9-79d6-4ace-a3c8-27dcd51d21ed',
+      ]);
+    expect(result.fragments[3].levelkeys, 'fourth segment has two keys')
+      .to.be.an('object')
+      .with.keys([
+        'com.apple.streamingkeydelivery',
+        'urn:uuid:edef8ba9-79d6-4ace-a3c8-27dcd51d21ed',
+      ]);
+    expect(result)
+      .to.have.property('encryptedFragments')
+      .which.is.an('array')
+      .which.has.members([result.fragments[0], result.fragments[2]]);
+  });
+
   it('parse clear->enc->clear->enc playlist', function () {
     const level = `#EXTM3U
 #EXT-X-VERSION:6
