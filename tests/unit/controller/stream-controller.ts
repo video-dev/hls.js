@@ -31,6 +31,7 @@ import type { MediaFragment } from '../../../src/loader/fragment';
 import type { ParsedMultivariantPlaylist } from '../../../src/loader/m3u8-parser';
 import type { BufferAppendedData, ErrorData } from '../../../src/types/events';
 import type { LevelAttributes } from '../../../src/types/level';
+import type { BufferInfo } from '../../../src/utils/buffer-helper';
 
 use(sinonChai);
 
@@ -1542,6 +1543,133 @@ ${durations.map((duration, i) => `#EXTINF:${duration},\n${i}.ts`).join('\n')}
           start: 6,
         });
       });
+    });
+  });
+
+  describe('resetAtDiscontinuity', function () {
+    let media: HTMLMediaElement;
+    let playing: MediaFragment;
+    let next: MediaFragment;
+    let bufferInfo: BufferInfo;
+    let drained: BufferInfo;
+
+    function makeFrag(sn: number, start: number, cc: number) {
+      const initSegment = new Fragment(PlaylistLevelType.MAIN, 'init.mp4');
+      initSegment.cc = cc;
+      const frag = new Fragment(PlaylistLevelType.MAIN, '') as MediaFragment;
+      frag.sn = sn;
+      frag.cc = cc;
+      frag.duration = 10;
+      frag.setStart(start);
+      frag.initSegment = initSegment;
+      return frag;
+    }
+
+    function playAt(currentTime: number, paused: boolean = false) {
+      streamController['fragPrevious'] = playing;
+      Object.assign(media, { currentTime, paused, seeking: false });
+    }
+
+    function seekTo(currentTime: number) {
+      // A seek clears fragPrevious, so only fragPlaying tells us what is buffered
+      streamController['fragPrevious'] = null;
+      streamController['fragPlaying'] = playing;
+      Object.assign(media, { currentTime, paused: false, seeking: true });
+    }
+
+    function holdAt(frag: MediaFragment, info: BufferInfo = drained) {
+      return streamController['resetAtDiscontinuity'](frag, info);
+    }
+
+    beforeEach(function () {
+      hls.config.resetMediaSourcePerDiscontinuity = true;
+      media = {} as unknown as HTMLMediaElement;
+      streamController['media'] = media;
+      playing = makeFrag(1, 10, 0);
+      next = makeFrag(2, 20, 1);
+      bufferInfo = {
+        len: 1,
+        nextStart: 0,
+        start: 0,
+        end: 1,
+        bufferedIndex: 0,
+        buffered: [{ start: 0, end: 1 }],
+      };
+      drained = { ...bufferInfo, len: 0 };
+      sinon.spy(hls, 'trigger');
+      sinon.stub(hls, 'detachMedia');
+      sinon.stub(hls, 'attachMedia');
+      sinon.stub(hls, 'startLoad');
+    });
+
+    it('does not hold when the option is off', function () {
+      hls.config.resetMediaSourcePerDiscontinuity = false;
+      seekTo(25);
+
+      expect(holdAt(next)).to.be.false;
+      expect(hls.detachMedia).to.not.have.been.called;
+    });
+
+    it('does not hold before any segment is buffered', function () {
+      expect(holdAt(next)).to.be.false;
+    });
+
+    it('does not hold within the same discontinuity', function () {
+      playAt(15);
+
+      expect(holdAt(makeFrag(2, 20, 0))).to.be.false;
+    });
+
+    it('holds while there is buffer left', function () {
+      playAt(15);
+
+      expect(holdAt(next, bufferInfo)).to.be.true;
+      expect(media.currentTime).to.equal(15);
+      expect(hls.detachMedia).to.not.have.been.called;
+    });
+
+    it('seeks forward when the buffer runs out during playback', function () {
+      playAt(19.95, true);
+
+      expect(holdAt(next)).to.be.true;
+      expect(media.currentTime).to.equal(19.95);
+
+      Object.assign(media, { paused: false });
+
+      expect(holdAt(next)).to.be.true;
+      expect(media.currentTime).to.equal(next.start + hls.config.maxBufferHole);
+      expect(hls.detachMedia).to.not.have.been.called;
+    });
+
+    it('does not seek when it starts before the buffered segment', function () {
+      // Playback sits before the buffered segment, e.g. after seeking back
+      playAt(3);
+
+      expect(holdAt(makeFrag(0, 5, 1))).to.be.true;
+      expect(media.currentTime).to.equal(3);
+      expect(hls.detachMedia).to.not.have.been.called;
+    });
+
+    it('resets the MediaSource when seeking into it', function () {
+      // Only a later segment of the new discontinuity carries a key
+      const details = new LevelDetails('');
+      details.fragments = [playing, next, makeFrag(3, 30, 1)];
+      details.encryptedFragments = [details.fragments[2]];
+      sinon.stub(streamController as any, 'getLevelDetails').returns(details);
+      seekTo(25);
+
+      expect(holdAt(next)).to.be.true;
+      expect(hls.trigger).to.have.been.calledOnceWith(
+        Events.DISCONTINUITY_CHANGING,
+        {
+          frag: next,
+          position: 25,
+          encrypted: true,
+        },
+      );
+      expect(hls.detachMedia).to.have.been.calledOnce;
+      expect(hls.attachMedia).to.have.been.calledWith(media);
+      expect(hls.startLoad).to.have.been.calledWith(25);
     });
   });
 });
