@@ -33,6 +33,7 @@
   "publishConfig": {
     "access": "public"
   },
+  "sideEffects": false,
   "scripts": {
     "build": "rollup --config && npm run build:types",
     "build:ci": "rollup --config && tsc --build tsconfig-lib.json && api-extractor run && npm run build:copy-types && es-check",
