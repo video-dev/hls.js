@@ -1524,9 +1524,10 @@ function parseSampleData(
         }
         let cts = 0;
         if (sampleCompositionTimeOffsetPresent) {
-          const version = trun[0];
-          cts =
-            version === 0 ? readUint32(trun, offset) : readSint32(trun, offset);
+          // Version 0 declares the offset unsigned, but packagers write negative
+          // offsets in version 0 truns and decoders accept them; read unsigned,
+          // -1 frame becomes ~2^32 units and the fragment's PTS range explodes.
+          cts = readSint32(trun, offset);
           offset += 4;
         }
         if (scanSei) {
@@ -1743,7 +1744,6 @@ export function parseSamples(
           }
 
           findBox(traf, ['trun']).map((trun) => {
-            const version = trun[0];
             const flags = readUint32(trun, 0) & 0xffffff;
             const dataOffsetPresent = (flags & 0x000001) !== 0;
             let dataOffset = 0;
@@ -1783,11 +1783,8 @@ export function parseSamples(
                 trunOffset += 4;
               }
               if (sampleCompositionOffsetsPresent) {
-                if (version === 0) {
-                  compositionOffset = readUint32(trun, trunOffset);
-                } else {
-                  compositionOffset = readSint32(trun, trunOffset);
-                }
+                // Signed for version 0 too (see parseSampleData)
+                compositionOffset = readSint32(trun, trunOffset);
                 trunOffset += 4;
               }
               if (track.type === ElementaryStreamTypes.VIDEO) {
