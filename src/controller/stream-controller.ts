@@ -693,9 +693,10 @@ export default class StreamController
 
     // Remove timestamp mapping from sparse array for discontinuities no longer present
     for (const cc in this.initPTS) {
-      if (+cc < newDetails.startCC) {
-        delete this.initPTS[cc];
+      if (+cc >= newDetails.startCC) {
+        break;
       }
+      delete this.initPTS[cc];
     }
 
     // trigger handler right now

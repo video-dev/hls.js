@@ -222,8 +222,10 @@ describe('StreamController', function () {
       const startCC = 1000000;
       const initPTS: TimestampOffset[] = [];
       const current = { baseTime: 0, timescale: 1, trackId: 0 };
-      initPTS[startCC] = current;
+      const next = { baseTime: 10, timescale: 1, trackId: 0 };
       initPTS[1] = { baseTime: 0, timescale: 1, trackId: 0 };
+      initPTS[startCC] = current;
+      initPTS[startCC + 1] = next;
       const enumerated: string[] = [];
       const indexChecks: PropertyKey[] = [];
       streamController['initPTS'] = new Proxy(initPTS, {
@@ -260,8 +262,9 @@ describe('StreamController', function () {
         }),
       });
 
-      expect(initPTS[startCC]).to.equal(current);
       expect(initPTS[1]).to.be.undefined;
+      expect(initPTS[startCC]).to.equal(current);
+      expect(initPTS[startCC + 1]).to.equal(next);
       expect(enumerated, 'existing entries enumerated').to.deep.equal([
         '1',
         String(startCC),
