@@ -1,6 +1,7 @@
 import { buildAbsoluteURL } from 'url-toolkit';
 import { LoadStats } from './load-stats';
 import { PlaylistLevelType } from '../types/loader';
+import { parseDateTime } from '../utils/date-time';
 import type { LevelKey } from './level-key';
 import type {
   FragmentLoaderContext,
@@ -337,7 +338,7 @@ export class Fragment extends BaseSegment {
 
   get programDateTime(): number | null {
     if (this._programDateTime === null && this.rawProgramDateTime) {
-      this.programDateTime = Date.parse(this.rawProgramDateTime);
+      this.programDateTime = parseDateTime(this.rawProgramDateTime);
     }
     return this._programDateTime;
   }
