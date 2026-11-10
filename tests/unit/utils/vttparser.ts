@@ -255,6 +255,42 @@ Hello after ad
     });
   });
 
+  describe('cue position alignment', function () {
+    const initPTS = { baseTime: 0, timescale: 90000, trackId: 0 };
+    const vttCCs: VTTCCs = {
+      ccOffset: 0,
+      presentationOffset: 0,
+      0: { start: 0, prevCC: -1, new: false },
+    };
+
+    function parsePositionAlign(position: string): string {
+      const parsedCallback = sinon.spy();
+      parseWebVTT(
+        toArrayBuffer(
+          `WEBVTT\n\n00:00:01.000 --> 00:00:03.000 position:${position}\nHello\n`,
+        ),
+        initPTS,
+        vttCCs,
+        0,
+        0,
+        parsedCallback,
+        () => {},
+      );
+      return parsedCallback.getCall(0).firstArg[0].positionAlign;
+    }
+
+    it('sets the position alignment from the position setting', function () {
+      expect(parsePositionAlign('22%,line-left')).to.equal('line-left');
+      expect(parsePositionAlign('50%,center')).to.equal('center');
+      expect(parsePositionAlign('78%,line-right')).to.equal('line-right');
+    });
+
+    it('maps pre-2016 draft position alignment values', function () {
+      expect(parsePositionAlign('22%,start')).to.equal('line-left');
+      expect(parsePositionAlign('78%,end')).to.equal('line-right');
+    });
+  });
+
   describe('cue text whitespace (#5337)', function () {
     const initPTS = { baseTime: 0, timescale: 90000, trackId: 0 };
     const vttCCs: VTTCCs = {
