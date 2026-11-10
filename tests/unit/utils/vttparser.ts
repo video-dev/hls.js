@@ -283,11 +283,13 @@ Hello after ad
       expect(parsePositionAlign('22%,line-left')).to.equal('line-left');
       expect(parsePositionAlign('50%,center')).to.equal('center');
       expect(parsePositionAlign('78%,line-right')).to.equal('line-right');
+      expect(parsePositionAlign('50%,auto')).to.equal('auto');
     });
 
     it('maps pre-2016 draft position alignment values', function () {
       expect(parsePositionAlign('22%,start')).to.equal('line-left');
       expect(parsePositionAlign('78%,end')).to.equal('line-right');
+      expect(parsePositionAlign('50%,middle')).to.equal('center');
     });
   });
 

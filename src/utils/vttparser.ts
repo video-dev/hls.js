@@ -186,7 +186,8 @@ function parseCue(input: string, cue: VTTCue, regionList: Region[]) {
             if (vals.length === 2) {
               settings.alt('positionAlign', vals[1], [
                 'start',
-                center,
+                'middle',
+                'center',
                 'end',
                 'line-left',
                 'line-right',
@@ -233,11 +234,7 @@ function parseCue(input: string, cue: VTTCue, regionList: Region[]) {
     cue.position = position;
     const positionAlign = settings.get('positionAlign');
     if (positionAlign) {
-      try {
-        cue.positionAlign = positionAlignValues[positionAlign] || positionAlign;
-      } catch (e) {
-        // The VTTCue polyfill (vttcue.ts) only accepts start/middle/end/left/right
-      }
+      cue.positionAlign = positionAlignValues[positionAlign] || positionAlign;
     }
   }
 
