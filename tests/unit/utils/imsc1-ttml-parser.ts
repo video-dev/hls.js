@@ -163,6 +163,33 @@ describe('IMSC1 TTML parser', function () {
     expect(cues[0].endTime).to.equal(1.5);
   });
 
+
+  it('parses TTML whose elements use a namespace prefix', function () {
+    const ttml =
+      `<?xml version="1.0" encoding="UTF-8"?>` +
+      `<tt:tt xmlns:tt="http://www.w3.org/ns/ttml" xml:lang="en">` +
+      `<tt:body><tt:div><tt:p begin="00:00:01.000" end="00:00:03.000">Hello</tt:p></tt:div></tt:body>` +
+      `</tt:tt>`;
+    const cues = cuesFor(ttml);
+    expect(cues).to.have.lengthOf(1);
+    expect(cues[0].startTime).to.equal(1);
+    expect(cues[0].endTime).to.equal(3);
+    expect(cues[0].text).to.equal('Hello');
+  });
+
+  it('parses prefixed parameter attributes and line breaks', function () {
+    const ttml =
+      `<?xml version="1.0" encoding="UTF-8"?>` +
+      `<tt:tt xmlns:tt="http://www.w3.org/ns/ttml" xmlns:ttp="http://www.w3.org/ns/ttml#parameter" ttp:frameRate="30">` +
+      `<tt:body><tt:div><tt:p begin="15f" end="45f">Hello<tt:br/>World</tt:p></tt:div></tt:body>` +
+      `</tt:tt>`;
+    const cues = cuesFor(ttml);
+    expect(cues).to.have.lengthOf(1);
+    expect(cues[0].startTime).to.equal(0.5);
+    expect(cues[0].endTime).to.equal(1.5);
+    expect(cues[0].text).to.equal('Hello\nWorld');
+  });
+
   describe('cue text', function () {
     function textOf(content: string, attrs: string = ''): string {
       const cues = cuesFor(ttmlWithText(content, attrs));
