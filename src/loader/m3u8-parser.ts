@@ -623,9 +623,7 @@ export default class M3U8Parser {
               const currentKey = levelkeys[levelKey.keyFormat];
               // Ignore duplicate playlist KEY tags
               if (!currentKey?.matches(levelKey)) {
-                if (currentKey) {
-                  levelkeys = Object.assign({}, levelkeys);
-                }
+                levelkeys = Object.assign({}, levelkeys);
                 levelkeys[levelKey.keyFormat] = levelKey;
               }
             } else {
