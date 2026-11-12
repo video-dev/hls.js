@@ -1027,6 +1027,9 @@ class Cea608Channel {
     }
     this.logger.log(VerboseLevel.INFO, 'MIDROW: ' + stringify(styles));
     this.writeScreen.setPen(styles);
+    // Mid-row codes are spacing attributes: they take up one column and
+    // show as a space, as if a standard space (0x20) had been received.
+    this.insertChars([0x20]);
   }
 
   outputDataUpdate(dispatch: boolean = false) {
