@@ -259,12 +259,10 @@ export default class StreamController
       return;
     }
 
-    const level = this.buffering ? hls.nextLoadLevel : hls.loadLevel;
+    let level = this.buffering ? hls.nextLoadLevel : hls.loadLevel;
     if (!levels?.[level]) {
       return;
     }
-
-    const levelInfo = levels[level];
 
     // if buffer length is less than maxBufLen try to load a new fragment
 
@@ -290,6 +288,10 @@ export default class StreamController
     if (!this.buffering) {
       return;
     }
+
+    // in case of live streams, make it possible to keep the level if there is not enough buffer
+    level = this.getLevelForLiveUpSwitch(level, bufferInfo);
+    const levelInfo = levels[level];
 
     // set next load level : this will trigger a playlist load if needed
     if (hls.loadLevel !== level && hls.manualLevel === -1) {
@@ -384,6 +386,61 @@ export default class StreamController
     }
 
     this.loadFragment(frag, levelInfo, targetBufferTime);
+  }
+
+  /**
+   * Near the end of a live playlist, the candidate playlist of an upswitch may not list the
+   * segment after the buffer end yet (e.g. when a CDN serves it a segment behind). Keep loading
+   * the current level until the candidate has that segment or the buffer covers its refresh.
+   */
+  private getLevelForLiveUpSwitch(
+    candidateLevel: number,
+    bufferInfo: BufferInfo,
+  ): number {
+    const { hls, levels } = this;
+    const currentLevel = hls.loadLevel;
+    const currentDetails = levels?.[currentLevel]?.details;
+    if (
+      candidateLevel <= currentLevel ||
+      !currentDetails?.live ||
+      this.loadingParts
+    ) {
+      return candidateLevel;
+    }
+    const candidateDetails = levels?.[candidateLevel]?.details;
+    const tolerance = this.config.maxFragLookUpTolerance;
+    const targetDuration = currentDetails.levelTargetDuration;
+    const currentAhead = currentDetails.fragmentEnd - bufferInfo.end;
+    const candidateAhead = candidateDetails
+      ? candidateDetails.fragmentEnd - bufferInfo.end
+      : 0;
+    if (
+      currentAhead + tolerance >= targetDuration * 2 ||
+      candidateAhead > tolerance
+    ) {
+      return candidateLevel;
+    }
+    // Switch if the buffer retains half a target duration after the candidate's refresh,
+    // or if the current playlist cannot extend the buffer and refreshes no sooner.
+    const candidateReloadAt = candidateDetails?.requestScheduled ?? -1;
+    const candidateReloadDelay = Math.max(
+      0,
+      (candidateReloadAt - self.performance.now()) / 1000,
+    );
+    if (
+      (candidateDetails &&
+        bufferInfo.len - candidateReloadDelay + tolerance >=
+          targetDuration / 2) ||
+      (currentAhead <= tolerance &&
+        (!candidateDetails ||
+          candidateReloadAt <= currentDetails.requestScheduled))
+    ) {
+      return candidateLevel;
+    }
+    this.log(
+      `Deferring live upswitch from level ${currentLevel} to ${candidateLevel}: candidate playlist does not extend past buffer end ${bufferInfo.end.toFixed(3)}`,
+    );
+    return currentLevel;
   }
 
   protected loadFragment(
