@@ -8,6 +8,46 @@ import type { TimestampOffset } from './timescale-conversion';
 
 export const IMSC1_CODEC = 'stpp.ttml.im1t';
 
+const TTML_NS = 'http://www.w3.org/ns/ttml';
+const TTP_NS = 'http://www.w3.org/ns/ttml#parameter';
+const XML_NS = 'http://www.w3.org/XML/1998/namespace';
+
+// getElementsByTagName / getAttribute('ttp:…') match the qualified name, so a
+// document that binds the TTML vocabulary to a prefix (`<tt:tt xmlns:tt=…>`,
+// as in EBU-TT-D) would miss the root and parameter attributes. Prefer the
+// namespaced lookup and fall back for documents that omit a namespace.
+function getTtmlElement(
+  from: Document | Element,
+  localName: string,
+): Element | undefined {
+  return (
+    from.getElementsByTagNameNS(TTML_NS, localName)[0] ||
+    from.getElementsByTagName(localName)[0]
+  );
+}
+
+function getTtmlElements(
+  from: Document | Element,
+  localName: string,
+): HTMLCollectionOf<Element> {
+  const namespaced = from.getElementsByTagNameNS(TTML_NS, localName);
+  return namespaced.length ? namespaced : from.getElementsByTagName(localName);
+}
+
+function getTtpAttribute(element: Element, localName: string): string | null {
+  return (
+    element.getAttributeNS(TTP_NS, localName) ||
+    element.getAttribute('ttp:' + localName)
+  );
+}
+
+function getXmlAttribute(element: Element, localName: string): string | null {
+  return (
+    element.getAttributeNS(XML_NS, localName) ||
+    element.getAttribute('xml:' + localName)
+  );
+}
+
 // Time format: h:m:s:frames(.subframes)
 const HMSF_REGEX = /^(\d{2,}):(\d{2}):(\d{2}):(\d{2})\.?(\d+)?$/;
 
@@ -48,7 +88,7 @@ export function parseIMSC1(
 function parseTTML(ttml: string, syncTime: number): Array<VTTCue> {
   const parser = new DOMParser();
   const xmlDoc = parser.parseFromString(ttml, 'text/xml');
-  const tt = xmlDoc.getElementsByTagName('tt')[0];
+  const tt = getTtmlElement(xmlDoc, 'tt');
   if (!tt) {
     throw new Error('Invalid ttml');
   }
@@ -60,12 +100,12 @@ function parseTTML(ttml: string, syncTime: number): Array<VTTCue> {
   const rateInfo: Record<string, string | number> = Object.keys(
     defaultRateInfo,
   ).reduce((result, key) => {
-    result[key] = tt.getAttribute(`ttp:${key}`) || defaultRateInfo[key];
+    result[key] = getTtpAttribute(tt, key) || defaultRateInfo[key];
     return result;
   }, {});
   // TTML1 6.2.5: frames are counted at the effective frame rate, which is
   // ttp:frameRate times the ttp:frameRateMultiplier ratio (1:1 if absent).
-  const multiplier = (tt.getAttribute('ttp:frameRateMultiplier') || '')
+  const multiplier = (getTtpAttribute(tt, 'frameRateMultiplier') || '')
     .trim()
     .split(/\s+/)
     .map(Number);
@@ -78,12 +118,12 @@ function parseTTML(ttml: string, syncTime: number): Array<VTTCue> {
   // Only the second case can fall back to the default above, so the first is
   // derived here, and it needs to know whether ttp:frameRate was really
   // present rather than filled in from defaultRateInfo.
-  if (!tt.getAttribute('ttp:tickRate') && tt.getAttribute('ttp:frameRate')) {
+  if (!getTtpAttribute(tt, 'tickRate') && getTtpAttribute(tt, 'frameRate')) {
     rateInfo.tickRate =
       Number(rateInfo.frameRate) * Number(rateInfo.subFrameRate);
   }
 
-  const trim = tt.getAttribute('xml:space') !== 'preserve';
+  const trim = getXmlAttribute(tt, 'space') !== 'preserve';
 
   const styleElements = collectionToDictionary(
     getElementCollection(tt, 'styling', 'style'),
@@ -144,9 +184,14 @@ function getElementCollection(
   parentName,
   childName,
 ): Array<HTMLElement> {
-  const parent = fromElement.getElementsByTagName(parentName)[0];
+  const parent = getTtmlElement(fromElement, parentName);
   if (parent) {
-    return [].slice.call(parent.querySelectorAll(childName));
+    // Attribute selectors (e.g. [begin]) are namespace-agnostic. Element
+    // names must use the TTML namespace so a prefixed <tt:style> still matches.
+    if (childName.startsWith('[')) {
+      return [].slice.call(parent.querySelectorAll(childName));
+    }
+    return [].slice.call(getTtmlElements(parent, childName));
   }
   return [];
 }
@@ -155,7 +200,7 @@ function collectionToDictionary(elementsWithId: Array<HTMLElement>): {
   [id: string]: HTMLElement;
 } {
   return elementsWithId.reduce((dict, element: HTMLElement) => {
-    const id = element.getAttribute('xml:id');
+    const id = getXmlAttribute(element, 'id');
     if (id) {
       dict[id] = element;
     }
@@ -178,7 +223,7 @@ function getTextContent(element, trim): string {
 
 function collectText(element, trim): string {
   return [].slice.call(element.childNodes).reduce((str, node, i) => {
-    if (node.nodeName === 'br' && i) {
+    if ((node.localName === 'br' || node.nodeName === 'br') && i) {
       return str + '\n';
     }
     if (node.childNodes?.length) {
