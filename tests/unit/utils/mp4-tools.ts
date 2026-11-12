@@ -122,6 +122,37 @@ describe('mp4-tools', function () {
     expect(track.ptsMax).to.equal(500 + 1001);
   });
 
+  it('reads negative composition offsets of version 0 truns as signed', function () {
+    // Packagers write two's complement offsets in version 0 truns and decoders
+    // accept them; read unsigned, -500 becomes 2^32 - 500 and ptsMax lands
+    // ~2^32 units past the fragment. MP4.moof writes version 1 for video, so
+    // the version byte is patched (the sample layout is the same).
+    const samples: TrackFragmentSample[] = [
+      gopSample(1001, 10, 0),
+      gopSample(1001, 10, -500),
+      gopSample(1001, 10, 500),
+    ];
+    const fragment = appendUint8Array(
+      MP4.moof(0, 0, { type: 'video', id: 1, samples }),
+      MP4.mdat(new Uint8Array(30)),
+    );
+    findBox(fragment, ['moof', 'traf', 'trun'])[0][0] = 0;
+
+    const sampleData = getSampleData(
+      fragment,
+      initData(),
+      new ChunkMetadata(0, 0, 0),
+      logger,
+    );
+
+    const track = sampleData[1];
+    expect(track.trun[0].samples.map((sample) => sample.cts)).to.deep.equal([
+      0, -500, 500,
+    ]);
+    expect(track.ptsMin).to.equal(0);
+    expect(track.ptsMax).to.equal(2002 + 500 + 1001);
+  });
+
   it('remuxVideoOnlyIFrameMoof truncates a partial mdat to the kept samples', function () {
     const fragment = gopFragment();
     const mdatPayloadOffset = fragment.byteLength - 60;
