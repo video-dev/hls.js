@@ -485,9 +485,13 @@ export default class MP4Remuxer extends Logger implements Remuxer {
           (timeOffset === 0 && videoInitPTS < _initPTS.baseTime)
         ) {
           initDTS = Math.min(initDTS as number, videoInitDTS);
-          // Bind initPTS to the lowest DTS across tracks to prevent negative timestamps
+          // Bind initPTS to the lowest DTS across tracks to prevent negative timestamps (#7932).
+          // At playlist time 0 no earlier fragment can follow, so anchor on PTS to map the first
+          // frame to 0 instead of leaving a gap of its composition offset at the buffer start.
           const videoInit =
-            !_initPTS && this.isVideoContiguous ? videoInitPTS : videoInitDTS;
+            !_initPTS && (this.isVideoContiguous || timeOffset === 0)
+              ? videoInitPTS
+              : videoInitDTS;
           initPTS = Math.min(initPTS as number, videoInit);
         }
       }
