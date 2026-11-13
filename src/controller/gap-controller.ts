@@ -87,6 +87,7 @@ export default class GapController extends TaskLoop {
     data: MediaAttachedData,
   ) {
     this.setInterval(TICK_INTERVAL);
+    this.skipRetry = this.nudgeRetry = 0;
     this.mediaSource = data.mediaSource;
     const media = (this.media = data.media);
     addEventListener(media, 'playing', this.onMediaPlaying);
@@ -638,6 +639,10 @@ export default class GapController extends TaskLoop {
         const fatal = ++this.skipRetry > nudgeMaxRetry;
         const targetTime =
           Math.max(startTime, currentTime) + skipBufferHolePadding;
+        if (fatal && this.skipRetry > nudgeMaxRetry + 1) {
+          // Fatal error already reported for this stall (skipRetry is reset once the playhead moves)
+          return targetTime;
+        }
         if (!fatal) {
           this.warn(
             `skipping hole, adjusting currentTime from ${currentTime} to ${targetTime}`,
@@ -704,7 +709,8 @@ export default class GapController extends TaskLoop {
         buffer: bufferInfo.len,
         bufferInfo,
       });
-    } else {
+    } else if (nudgeRetry === config.nudgeMaxRetry) {
+      // Report the fatal error once per stall (nudgeRetry is reset once the playhead moves)
       const error = new Error(
         `Playhead still not moving while enough data buffered @${currentTime} after ${config.nudgeMaxRetry} nudges`,
       );
