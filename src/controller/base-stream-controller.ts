@@ -1465,7 +1465,10 @@ export default class BaseStreamController
       const bufferedFragAtPos = this.fragmentTracker.getBufferedFrag(pos, type);
       if (
         bufferedFragAtPos &&
-        (bufferInfo.nextStart <= bufferedFragAtPos.end || bufferedFragAtPos.gap)
+        (bufferedFragAtPos.gap ||
+          (bufferInfo.nextStart <= bufferedFragAtPos.end &&
+            this.fragmentTracker.getState(bufferedFragAtPos) !==
+              FragmentState.PARTIAL))
       ) {
         const gapDuration = Math.max(
           Math.min(bufferInfo.nextStart, bufferedFragAtPos.end) - pos,

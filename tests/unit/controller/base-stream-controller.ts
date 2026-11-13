@@ -687,6 +687,95 @@ describe('BaseStreamController', function () {
         expect(result1 === null || typeof result1 === 'object').to.be.true;
         expect(result2 === null || typeof result2 === 'object').to.be.true;
       });
+
+      it('should not bridge an unbuffered hole inside a PARTIAL non-gap fragment', function () {
+        const frag = new Fragment(
+          PlaylistLevelType.MAIN,
+          'http://example.com/seg91.m4s',
+        ) as MediaFragment;
+        frag.sn = 91;
+        frag.level = 0;
+        frag.setStart(364);
+        frag.setDuration(4);
+        fragmentTracker.state = FragmentState.PARTIAL;
+        fragmentTracker.getBufferedFrag = sinon.stub().returns(frag);
+
+        const mediaBuffer = {
+          buffered: new TimeRangesMock([359, 364], [366, 375]),
+        };
+
+        const result = baseStreamController.getFwdBufferInfoAtPos(
+          mediaBuffer,
+          365,
+          PlaylistLevelType.MAIN,
+          0,
+        );
+
+        expect(result).to.not.be.null;
+        expect(result!.len).to.equal(0);
+        expect(result!.start).to.equal(365);
+        expect(result!.end).to.equal(365);
+        expect(result!.nextStart).to.equal(366);
+      });
+
+      it('should bridge a gap inside an OK fragment when maxBufferHole is smaller than the gap', function () {
+        const frag = new Fragment(
+          PlaylistLevelType.MAIN,
+          'http://example.com/seg91.m4s',
+        ) as MediaFragment;
+        frag.sn = 91;
+        frag.level = 0;
+        frag.setStart(364);
+        frag.setDuration(4);
+        fragmentTracker.state = FragmentState.OK;
+        fragmentTracker.getBufferedFrag = sinon.stub().returns(frag);
+
+        const mediaBuffer = {
+          buffered: new TimeRangesMock([359, 364], [365.2, 370]),
+        };
+
+        const result = baseStreamController.getFwdBufferInfoAtPos(
+          mediaBuffer,
+          365,
+          PlaylistLevelType.MAIN,
+          0,
+        );
+
+        expect(result).to.not.be.null;
+        expect(result!.len).to.equal(5);
+        expect(result!.start).to.equal(365.2);
+        expect(result!.end).to.equal(370);
+      });
+
+      it('should bridge a gap over a PARTIAL fragment marked as a gap', function () {
+        const frag = new Fragment(
+          PlaylistLevelType.MAIN,
+          'http://example.com/gap.m4s',
+        ) as MediaFragment;
+        frag.sn = 91;
+        frag.level = 0;
+        frag.gap = true;
+        frag.setStart(364);
+        frag.setDuration(2);
+        fragmentTracker.state = FragmentState.PARTIAL;
+        fragmentTracker.getBufferedFrag = sinon.stub().returns(frag);
+
+        const mediaBuffer = {
+          buffered: new TimeRangesMock([359, 364], [366, 370]),
+        };
+
+        const result = baseStreamController.getFwdBufferInfoAtPos(
+          mediaBuffer,
+          365,
+          PlaylistLevelType.MAIN,
+          0,
+        );
+
+        expect(result).to.not.be.null;
+        expect(result!.len).to.equal(5);
+        expect(result!.start).to.equal(366);
+        expect(result!.end).to.equal(370);
+      });
     });
 
     describe('resetLoadingState method', function () {
