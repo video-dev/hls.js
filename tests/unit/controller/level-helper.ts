@@ -11,6 +11,7 @@ import M3U8Parser from '../../../src/loader/m3u8-parser';
 import { Level } from '../../../src/types/level';
 import { PlaylistLevelType } from '../../../src/types/loader';
 import { AttrList } from '../../../src/utils/attr-list';
+import { alignStream } from '../../../src/utils/discontinuities';
 import {
   addSliding,
   adjustSliding,
@@ -203,6 +204,54 @@ describe('LevelHelper Tests', function () {
       adjustSliding(oldPlaylist, newPlaylist);
       const actual = newPlaylist.fragments.map((f) => f.start);
       expect(actual).to.deep.equal([15, 20, 25]);
+    });
+
+    it('keeps merged live playlists aligned with main across refreshes', function () {
+      const main = generatePlaylist([1, 2, 3, 4, 5], 10);
+      let subtitles = generatePlaylist([1, 2, 3]);
+      alignStream(main, subtitles, logger);
+      expect(subtitles.fragments.map((f) => f.start)).to.deep.equal([
+        10, 15, 20,
+      ]);
+
+      [2, 3].forEach((startSN) => {
+        const updated = generatePlaylist([startSN, startSN + 1, startSN + 2]);
+        mergeDetails(subtitles, updated, logger);
+        alignStream(main, updated, logger);
+        expect(updated.fragments.map((f) => f.start)).to.deep.equal(
+          main.fragments.slice(startSN - 1, startSN + 2).map((f) => f.start),
+        );
+        subtitles = updated;
+      });
+    });
+
+    it('corrects existing offsets on either side of another rendition', function () {
+      const main = generatePlaylist([1, 2, 3], 10);
+      [12, 18].forEach((offset) => {
+        const subtitles = generatePlaylist([2, 3, 4], offset);
+        alignStream(main, subtitles, logger);
+        expect(subtitles.fragments.map((f) => f.start)).to.deep.equal([
+          15, 20, 25,
+        ]);
+      });
+    });
+
+    it('aligns adjacent renditions without adding an existing offset twice', function () {
+      const main = generatePlaylist([1, 2, 3], 10);
+      const subtitles = generatePlaylist([4, 5, 6], 12);
+      alignStream(main, subtitles, logger);
+      expect(subtitles.fragments.map((f) => f.start)).to.deep.equal([
+        25, 30, 35,
+      ]);
+    });
+
+    it('keeps an existing offset when rendition sequences have no overlap', function () {
+      const main = generatePlaylist([1, 2, 3], 10);
+      const subtitles = generatePlaylist([5, 6, 7], 30);
+      alignStream(main, subtitles, logger);
+      expect(subtitles.fragments.map((f) => f.start)).to.deep.equal([
+        30, 35, 40,
+      ]);
     });
   });
 
