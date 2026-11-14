@@ -500,14 +500,19 @@ export function adjustSliding(
     newDetails.startSN + newDetails.skippedSegments - oldDetails.startSN;
   const oldFragments = oldDetails.fragments;
   const advancedOrStable = delta >= 0;
+  // A rendition may already have been slid by mergeDetails before aligning it
+  // with main. Apply only the difference from its existing start in that case.
+  const existingSliding = matchingStableVariantOrRendition
+    ? 0
+    : newDetails.fragmentStart;
   let sliding = 0;
   if (advancedOrStable && delta < oldFragments.length) {
-    sliding = oldFragments[delta].start;
+    sliding = oldFragments[delta].start - existingSliding;
     logger?.log(
       `Aligning playlists based on SN ${newDetails.startSN} (diff: ${sliding})`,
     );
   } else if (advancedOrStable && newDetails.startSN === oldDetails.endSN + 1) {
-    sliding = oldDetails.fragmentEnd;
+    sliding = oldDetails.fragmentEnd - existingSliding;
     logger?.log(
       `Aligning playlists based on first/last SN ${newDetails.startSN} (diff: ${sliding})`,
     );
