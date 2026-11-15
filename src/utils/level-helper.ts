@@ -500,10 +500,11 @@ export function adjustSliding(
     newDetails.startSN + newDetails.skippedSegments - oldDetails.startSN;
   const oldFragments = oldDetails.fragments;
   const advancedOrStable = delta >= 0;
-  // A rendition may already have been slid by mergeDetails before aligning it
-  // with main. Apply only the difference from its existing start in that case.
+  // The configured offset is already applied when the playlist is loaded.
+  // Use it for same-rendition updates because a delta playlist may contain
+  // fragments copied from the old details ahead of the new ones.
   const existingSliding = matchingStableVariantOrRendition
-    ? 0
+    ? (newDetails.appliedTimelineOffset ?? 0)
     : newDetails.fragmentStart;
   let sliding = 0;
   if (advancedOrStable && delta < oldFragments.length) {
@@ -518,7 +519,10 @@ export function adjustSliding(
     );
   } else if (advancedOrStable && matchingStableVariantOrRendition) {
     // align with expected position (updated playlist start sequence is past end sequence of last update)
-    sliding = oldDetails.fragmentStart + delta * newDetails.levelTargetDuration;
+    sliding =
+      oldDetails.fragmentStart +
+      delta * newDetails.levelTargetDuration -
+      existingSliding;
   } else if (!newDetails.skippedSegments && newDetails.fragmentStart === 0) {
     // align new start with old (playlist switch has a sequence with no overlap and should not be used for alignment)
     sliding = oldDetails.fragmentStart;

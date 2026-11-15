@@ -740,6 +740,54 @@ segment-0.m4s
       );
       expect(payload.deliveryDirectives).to.include({ msn: 1, part: 1 });
     });
+
+    it('applies timelineOffset to the trailing part hint', function () {
+      const url = 'https://example.com/video.m3u8';
+      const details = M3U8Parser.parseLevelPlaylist(
+        `#EXTM3U
+#EXT-X-VERSION:9
+#EXT-X-TARGETDURATION:6
+#EXT-X-SERVER-CONTROL:PART-HOLD-BACK=3,CAN-BLOCK-RELOAD=YES
+#EXT-X-PART-INF:PART-TARGET=1
+#EXT-X-MEDIA-SEQUENCE:0
+#EXT-X-PART:DURATION=1,URI="part-0.m4s",INDEPENDENT=YES
+#EXTINF:6,
+segment-0.m4s
+#EXT-X-PART:DURATION=1,URI="part-1.m4s",INDEPENDENT=YES
+#EXT-X-PRELOAD-HINT:TYPE=PART,URI="part-2.m4s"`,
+        url,
+        0,
+        PlaylistLevelType.MAIN,
+        0,
+        {},
+      );
+      const levelInfo = new Level(
+        parsedLevel({
+          bitrate: 1_000_000,
+          url,
+        }),
+      );
+
+      expect(details.playlistParsingError).to.be.null;
+      expect(details.endSN).to.equal(0);
+      expect(details.lastPartSn).to.equal(1);
+      expect(details.lastPartIndex).to.equal(0);
+
+      hls.config.timelineOffset = 10;
+      levelController.startLoad();
+      levelController.playlistLoaded(0, {
+        details,
+        id: 0,
+        level: 0,
+        levelInfo,
+        networkDetails: new Response('ok'),
+        stats: new LoadStats(),
+        deliveryDirectives: null,
+      });
+
+      expect(details.fragmentStart).to.equal(10);
+      expect(details.fragmentHint?.start).to.equal(16);
+    });
   });
 
   describe('Redundant Streams', function () {

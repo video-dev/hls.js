@@ -225,23 +225,52 @@ describe('LevelHelper Tests', function () {
       });
     });
 
-    it('corrects existing offsets on either side of another rendition', function () {
+    it('does not re-align a slid rendition by sequence number', function () {
       const main = generatePlaylist([1, 2, 3], 10);
       [12, 18].forEach((offset) => {
         const subtitles = generatePlaylist([2, 3, 4], offset);
         alignStream(main, subtitles, logger);
         expect(subtitles.fragments.map((f) => f.start)).to.deep.equal([
-          15, 20, 25,
+          offset,
+          offset + 5,
+          offset + 10,
         ]);
       });
     });
 
-    it('aligns adjacent renditions without adding an existing offset twice', function () {
+    it('does not re-align a slid rendition when sequences are adjacent', function () {
       const main = generatePlaylist([1, 2, 3], 10);
       const subtitles = generatePlaylist([4, 5, 6], 12);
       alignStream(main, subtitles, logger);
       expect(subtitles.fragments.map((f) => f.start)).to.deep.equal([
-        25, 30, 35,
+        12, 17, 22,
+      ]);
+    });
+
+    it('aligns a fresh rendition with a configured timeline offset', function () {
+      const main = generatePlaylist([1, 2, 3], 10);
+      const subtitles = generatePlaylist([2, 3, 4], 10);
+      subtitles.appliedTimelineOffset = 10;
+      alignStream(main, subtitles, logger);
+      expect(subtitles.fragments.map((f) => f.start)).to.deep.equal([
+        15, 20, 25,
+      ]);
+    });
+
+    it('keeps the configured timeline offset once across subtitle refreshes', function () {
+      const main = generatePlaylist([1, 2, 3, 4, 5], 10);
+      const previous = generatePlaylist([2, 3, 4], 10);
+      previous.appliedTimelineOffset = 10;
+      alignStream(main, previous, logger);
+      expect(previous.fragmentStart).to.equal(15);
+
+      const reloaded = generatePlaylist([3, 4, 5], 10);
+      reloaded.appliedTimelineOffset = 10;
+      mergeDetails(previous, reloaded, logger);
+      expect(reloaded.fragmentStart).to.equal(20);
+      alignStream(main, reloaded, logger);
+      expect(reloaded.fragments.map((f) => f.start)).to.deep.equal([
+        20, 25, 30,
       ]);
     });
 
