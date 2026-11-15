@@ -11,10 +11,6 @@ on:
         description: 'The ref to checkout'
         type: string
         required: true
-      concurrency-key:
-        description: 'Used in the concurrency groups of the jobs'
-        type: string
-        required: true
       allow-unsafe-pr-checkout:
         description: 'Allow checking out fork PR code when triggered by pull_request_target. The caller is responsible for gating the run.'
         type: boolean
@@ -48,9 +44,6 @@ defaults:
 jobs:
   build:
     runs-on: ubuntu-latest
-    concurrency:
-      group: 'test:build:${{ inputs.concurrency-key }}'
-      cancel-in-progress: true
     steps:
       - uses: actions/checkout@v7
         with:
@@ -140,9 +133,6 @@ jobs:
   test_unit:
     needs: build
     runs-on: ubuntu-latest
-    concurrency:
-      group: 'test:test_unit:${{ inputs.concurrency-key }}'
-      cancel-in-progress: true
     steps:
       - uses: actions/checkout@v7
         with:
@@ -187,9 +177,6 @@ jobs:
   test_functional_required:
     needs: test_unit
     runs-on: ubuntu-latest
-    concurrency:
-      group: 'test:test_functional_required:${{ matrix.config }}:${{ inputs.concurrency-key }}'
-      cancel-in-progress: true
     name: test_functional_required (${{ matrix.config }})
     strategy:
       fail-fast: true
@@ -265,9 +252,6 @@ jobs:
   test_functional_optional:
     needs: test_functional_required
     runs-on: ubuntu-latest
-    concurrency:
-      group: 'test:test_functional_optional:${{ matrix.config }}:${{ inputs.concurrency-key }}'
-      cancel-in-progress: true
     continue-on-error: true
     name: test_functional_optional (${{ matrix.config }})
     strategy:

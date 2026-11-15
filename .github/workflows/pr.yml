@@ -37,7 +37,6 @@ jobs:
     with:
       # pinned to the event sha so pushes after approval can't change what runs
       ref: ${{ github.event.pull_request.head.sha }}
-      concurrency-key: pr-${{ github.event.pull_request.number }}
       # fork commits are gated by the approve job
       allow-unsafe-pr-checkout: true
     secrets:
