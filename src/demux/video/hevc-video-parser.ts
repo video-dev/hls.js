@@ -34,8 +34,8 @@ class HevcVideoParser extends BaseVideoParser {
       return VideoSample;
     };
 
-    units.forEach((unit, index) => {
-      if (this.startsNewAccessUnit(VideoSample, track, unit, index)) {
+    units.forEach((unit) => {
+      if (this.startsNewAccessUnit(VideoSample, unit)) {
         this.pushAccessUnit(VideoSample as ParsedVideoSample, track);
         // 16..23 are IRAP (IDR/CRA/BLA) NAL types per H.265 Table 7-1.
         const isIrap = unit.type >= 16 && unit.type <= 23;
@@ -227,9 +227,7 @@ class HevcVideoParser extends BaseVideoParser {
 
   private startsNewAccessUnit(
     VideoSample: ParsedVideoSample | null,
-    track: DemuxedVideoTrack,
     unit: { type: number; data: Uint8Array },
-    nalIndex: number,
   ): boolean {
     if (!VideoSample) {
       return false;
@@ -244,16 +242,6 @@ class HevcVideoParser extends BaseVideoParser {
     }
 
     const { type, data } = unit;
-
-    // if new NAL units found and last sample still there, let's push ...
-    // this helps parsing streams with missing AUD (only do this if AUD never found)
-    // Suffix NALs (36 EOS, 37 EOB, 38 filler data, 40 suffix SEI) belong to
-    // the current access unit and never start one (spec 7.4.2.4.4), so a PES
-    // boundary there must not split the sample.
-    const isAuSuffix = (type >= 36 && type <= 38) || type === 40;
-    if (!track.audFound && nalIndex === 0 && !isAuSuffix) {
-      return true;
-    }
 
     // Per H.265 spec 7.4.2.4.4 the following NAL types must appear before
     // the first VCL of an access unit; seeing one after a complete picture

@@ -108,6 +108,28 @@ describe('HevcVideoParser', function () {
     ]);
   });
 
+  it('keeps every slice of a multi-slice picture in one sample when AUDs are missing', function () {
+    parseNal(parser, track, textTrack, 32);
+    parseNal(parser, track, textTrack, 33);
+    parseNal(parser, track, textTrack, 34);
+    parseNal(parser, track, textTrack, 19);
+    parseNal(parser, track, textTrack, 19, false, false);
+    parseNal(parser, track, textTrack, 19, false, false);
+    parseNal(parser, track, textTrack, 19, false, false);
+    parseNal(parser, track, textTrack, 1);
+    parseNal(parser, track, textTrack, 1, false, false);
+    parseNal(parser, track, textTrack, 1, false, false);
+    parseNal(parser, track, textTrack, 1, true, false);
+
+    expect(track.samples).to.have.lengthOf(2);
+    expect(track.samples[0].units.map((unit) => unit.type)).to.deep.equal([
+      33, 34, 19, 19, 19, 19,
+    ]);
+    expect(track.samples[1].units.map((unit) => unit.type)).to.deep.equal([
+      1, 1, 1, 1,
+    ]);
+  });
+
   it('produces one sample per picture when only the first PES of each access unit has a PTS', function () {
     parseAu(parser, track, textTrack, [32, 33, 34, 19, 40], 90000, false, true);
     parseAu(parser, track, textTrack, [1, 40], 180000, false, true);
@@ -155,9 +177,18 @@ function parseNal(
   textTrack: DemuxedUserdataTrack,
   type: number,
   endOfSegment = false,
+  firstSlice = true,
 ) {
   // 4-byte Annex-B prefix, 2-byte HEVC NAL header, first_slice flag set.
-  const data = new Uint8Array([0, 0, 0, 1, (type << 1) & 0x7e, 0x01, 0x80]);
+  const data = new Uint8Array([
+    0,
+    0,
+    0,
+    1,
+    (type << 1) & 0x7e,
+    0x01,
+    firstSlice ? 0x80 : 0x00,
+  ]);
   const pes: PES = { data, pts: 90000, dts: 90000, len: data.length };
   parser.parsePES(track, textTrack, pes, endOfSegment);
 }
