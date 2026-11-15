@@ -52,7 +52,7 @@ jobs:
       group: 'test:build:${{ inputs.concurrency-key }}'
       cancel-in-progress: true
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7.0.1
         with:
           ref: ${{ inputs.ref }}
           fetch-depth: 0
@@ -60,7 +60,7 @@ jobs:
           allow-unsafe-pr-checkout: ${{ inputs.allow-unsafe-pr-checkout }}
 
       - name: check package-lock.json version
-        uses: actions/github-script@v9
+        uses: actions/github-script@v9.0.0
         with:
           script: |
             const fs = require('fs');
@@ -74,7 +74,7 @@ jobs:
             }
 
       - name: cache node_modules
-        uses: actions/cache@v6
+        uses: actions/cache@v6.1.0
         env:
           cache-name: cache-node-modules
         with:
@@ -86,7 +86,7 @@ jobs:
             ${{ runner.os }}-
 
       - name: use Node.js
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@v7.1.0
         with:
           node-version-file: '.node-version'
 
@@ -127,7 +127,7 @@ jobs:
           CI: true
 
       - name: upload build
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v4.6.2
         with:
           name: build
           # version number is set in package.json so need to include that
@@ -144,14 +144,14 @@ jobs:
       group: 'test:test_unit:${{ inputs.concurrency-key }}'
       cancel-in-progress: true
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7.0.1
         with:
           ref: ${{ inputs.ref }}
           persist-credentials: false
           allow-unsafe-pr-checkout: ${{ inputs.allow-unsafe-pr-checkout }}
 
       - name: cache node_modules
-        uses: actions/cache@v6
+        uses: actions/cache@v6.1.0
         env:
           cache-name: cache-node-modules
         with:
@@ -163,12 +163,12 @@ jobs:
             ${{ runner.os }}-
 
       - name: use Node.js
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@v7.1.0
         with:
           node-version-file: '.node-version'
 
       - name: download build
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v5.0.0
         with:
           name: build
 
@@ -205,14 +205,14 @@ jobs:
             uaVersion: '75.0'
 
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7.0.1
         with:
           ref: ${{ inputs.ref }}
           persist-credentials: false
           allow-unsafe-pr-checkout: ${{ inputs.allow-unsafe-pr-checkout }}
 
       - name: cache node_modules
-        uses: actions/cache@v6
+        uses: actions/cache@v6.1.0
         env:
           cache-name: cache-node-modules
         with:
@@ -224,17 +224,17 @@ jobs:
             ${{ runner.os }}-
 
       - name: use Node.js
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@v7.1.0
         with:
           node-version-file: '.node-version'
 
       - name: download build
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v5.0.0
         with:
           name: build
 
       - name: start SauceConnect tunnel
-        uses: saucelabs/sauce-connect-action@cb88b508c6f9ff4d84490093733315dbd55de022 # v3
+        uses: saucelabs/sauce-connect-action@v3.0.0
         with:
           username: ${{ secrets.SAUCE_USERNAME }}
           accessKey: ${{ secrets.SAUCE_ACCESS_KEY }}
@@ -286,14 +286,14 @@ jobs:
             os: macOS 15
 
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7.0.1
         with:
           ref: ${{ inputs.ref }}
           persist-credentials: false
           allow-unsafe-pr-checkout: ${{ inputs.allow-unsafe-pr-checkout }}
 
       - name: cache node_modules
-        uses: actions/cache@v6
+        uses: actions/cache@v6.1.0
         env:
           cache-name: cache-node-modules
         with:
@@ -305,23 +305,23 @@ jobs:
             ${{ runner.os }}-
 
       - name: use Node.js
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@v7.1.0
         with:
           node-version-file: '.node-version'
 
       - name: download build
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v5.0.0
         with:
           name: build
 
       - name: setup BrowserStack env
-        uses: browserstack/github-actions/setup-env@93aebce225b754566349151c0676b26b005e591b # v1.0.4
+        uses: browserstack/github-actions/setup-env@v1.0.4
         with:
           username: ${{ secrets.BROWSERSTACK_USERNAME }}
           access-key: ${{ secrets.BROWSERSTACK_ACCESS_KEY }}
 
       - name: start BrowserStack Local
-        uses: browserstack/github-actions/setup-local@93aebce225b754566349151c0676b26b005e591b # v1.0.4
+        uses: browserstack/github-actions/setup-local@v1.0.4
         with:
           local-testing: start
           local-identifier: ${{ github.run_id }}-${{ matrix.config }}
@@ -348,6 +348,6 @@ jobs:
 
       - name: stop BrowserStack Local
         if: always()
-        uses: browserstack/github-actions/setup-local@93aebce225b754566349151c0676b26b005e591b # v1.0.4
+        uses: browserstack/github-actions/setup-local@v1.0.4
         with:
           local-testing: stop
