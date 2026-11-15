@@ -13,6 +13,10 @@ on:
 
 permissions: {}
 
+concurrency:
+  group: 'pr:${{ github.event.pull_request.number }}'
+  cancel-in-progress: true
+
 jobs:
   approve:
     # required reviewers are configured on this environment,
