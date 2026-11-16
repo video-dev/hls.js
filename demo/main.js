@@ -734,14 +734,15 @@ function loadSelectedStream() {
 
   hls.on(Hls.Events.ERROR, function (eventName, data) {
     console.warn('Error event:', data);
+    const escapedURL = url.replaceAll('<', '&lt;').replaceAll('>', '&gt;');
     switch (data.details) {
       case Hls.ErrorDetails.MANIFEST_LOAD_ERROR:
         try {
           $('#errorOut').html(
             'Cannot load <a href="' +
-              data.context.url +
+              encodeURI(data.context.url) +
               '">' +
-              url +
+              escapedURL +
               '</a><br>HTTP response code:' +
               data.response.code +
               ' <br>' +
@@ -755,9 +756,9 @@ function loadSelectedStream() {
         } catch (err) {
           $('#errorOut').html(
             'Cannot load <a href="' +
-              data.context.url +
+              encodeURI(data.context.url) +
               '">' +
-              url +
+              escapedURL +
               '</a><br>Response body: ' +
               data.response.text
           );
