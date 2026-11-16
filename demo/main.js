@@ -735,6 +735,9 @@ function loadSelectedStream() {
   hls.on(Hls.Events.ERROR, function (eventName, data) {
     console.warn('Error event:', data);
     const escapedURL = url.replaceAll('<', '&lt;').replaceAll('>', '&gt;');
+    const escapedResponse = data.response.text
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;');
     switch (data.details) {
       case Hls.ErrorDetails.MANIFEST_LOAD_ERROR:
         try {
@@ -746,7 +749,7 @@ function loadSelectedStream() {
               '</a><br>HTTP response code:' +
               data.response.code +
               ' <br>' +
-              data.response.text
+              escapedResponse
           );
           if (data.response.code === 0) {
             $('#errorOut').append(
@@ -760,7 +763,7 @@ function loadSelectedStream() {
               '">' +
               escapedURL +
               '</a><br>Response body: ' +
-              data.response.text
+              escapedResponse
           );
         }
         break;
