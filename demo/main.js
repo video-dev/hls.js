@@ -735,7 +735,8 @@ function loadSelectedStream() {
   hls.on(Hls.Events.ERROR, function (eventName, data) {
     console.warn('Error event:', data);
     const escapedURL = url.replaceAll('<', '&lt;').replaceAll('>', '&gt;');
-    const escapedResponse = data.response.text
+    const code = (data.response && data.response.code) || 0;
+    const escapedResponse = ((data.response && data.response.text) || '')
       .replaceAll('<', '&lt;')
       .replaceAll('>', '&gt;');
     switch (data.details) {
@@ -747,11 +748,11 @@ function loadSelectedStream() {
               '">' +
               escapedURL +
               '</a><br>HTTP response code:' +
-              data.response.code +
+              code +
               ' <br>' +
               escapedResponse
           );
-          if (data.response.code === 0) {
+          if (code === 0) {
             $('#errorOut').append(
               'This might be a CORS issue, consider installing <a href="https://chrome.google.com/webstore/detail/allow-control-allow-origi/nlfbmbojpeacfghkpbjhddihlkkiljbi">Allow-Control-Allow-Origin</a> Chrome Extension'
             );
