@@ -83,6 +83,10 @@ export class ID3TrackController implements ComponentAPI {
       }
     | undefined
   > = {};
+  // Strong references to the ID3/emsg cues added to the track. Safari may
+  // garbage collect the JS wrapper of a cue (and its `type`/`value` expando
+  // properties) while the cue is still in the track; holding on to it prevents that.
+  private id3Cues: Set<VTTCue | TextTrackCue> = new Set();
   private removeCues: boolean = true;
   private assetCue?: VTTCue | TextTrackCue;
 
@@ -96,6 +100,7 @@ export class ID3TrackController implements ComponentAPI {
     this.id3Track = null;
     this.media = null;
     this.dateRangeCuesAppended = {};
+    this.id3Cues.clear();
     // @ts-ignore
     this.hls = this.onEventCueEnter = null;
   }
@@ -163,6 +168,7 @@ export class ID3TrackController implements ComponentAPI {
       this.id3Track.remove();
       this.id3Track = null;
     }
+    this.id3Cues.clear();
     this.dateRangeCuesAppended = {};
   }
 
@@ -236,6 +242,7 @@ export class ID3TrackController implements ComponentAPI {
           );
           if (cue) {
             this.id3Track.track.addCue(cue);
+            this.id3Cues.add(cue);
           }
         }
       }
@@ -287,6 +294,11 @@ export class ID3TrackController implements ComponentAPI {
           ((cue as any).type === MetadataSchema.emsg && enableEmsgMetadataCues);
       }
       removeCuesInRange(id3Track.track, startOffset, endOffset, predicate);
+      this.id3Cues.forEach((cue) => {
+        if (!cue.track) {
+          this.id3Cues.delete(cue);
+        }
+      });
     }
   }
 
