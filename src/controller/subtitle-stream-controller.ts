@@ -129,7 +129,14 @@ export class SubtitleStreamController
     data: SubtitleFragProcessed,
   ) {
     const { frag, part, success } = data;
+    const fragmentComplete = !part || part.end >= frag.end - PART_END_TOLERANCE;
     if (!success) {
+      if (fragmentComplete && !this.fragContextChanged(frag)) {
+        if (isMediaFragment(frag)) {
+          this.fragPrevious = frag;
+        }
+        this.resetFragmentLoading(frag);
+      }
       return;
     }
 
@@ -156,7 +163,7 @@ export class SubtitleStreamController
       timeRange = { start, end };
       buffered.push(timeRange);
     }
-    if (!part || end >= frag.end - PART_END_TOLERANCE) {
+    if (fragmentComplete) {
       const entity = this.fragmentTracker.fragBuffered(frag as MediaFragment);
       if (part && entity) {
         entity.range.subs = {

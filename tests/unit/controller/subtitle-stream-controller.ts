@@ -17,6 +17,7 @@ import {
   Part,
 } from '../../../src/loader/fragment';
 import KeyLoader from '../../../src/loader/key-loader';
+import { LevelDetails } from '../../../src/loader/level-details';
 import { PlaylistLevelType } from '../../../src/types/loader';
 import { AttrList } from '../../../src/utils/attr-list';
 
@@ -219,6 +220,112 @@ describe('SubtitleStreamController', function () {
       subtitleStreamController.currentTrackId = 0;
       subtitleStreamController.tracksBuffered = [[]];
       subtitleStreamController.state = State.FRAG_LOADING;
+    });
+
+    describe('processing failures', function () {
+      let frag: MediaFragment;
+
+      beforeEach(function () {
+        frag = new Fragment(PlaylistLevelType.SUBTITLE, '') as MediaFragment;
+        frag.sn = 1;
+        frag.level = 0;
+        frag.start = 6;
+        frag.duration = 6;
+        subtitleStreamController.fragCurrent = frag;
+        hls.trigger(Events.FRAG_LOADED, { frag, payload: new ArrayBuffer(0) });
+      });
+
+      function fail(part: Part | null = null) {
+        hls.trigger(Events.SUBTITLE_FRAG_PROCESSED, {
+          success: false,
+          frag,
+          part,
+          error: new Error('Subtitle discontinuity domain does not match main'),
+        });
+      }
+
+      it('continues with the next segment without buffering the failed one', function () {
+        const previous = new Fragment(
+          PlaylistLevelType.SUBTITLE,
+          '',
+        ) as MediaFragment;
+        previous.sn = 0;
+        previous.level = 0;
+        previous.duration = 6;
+        const next = new Fragment(
+          PlaylistLevelType.SUBTITLE,
+          '',
+        ) as MediaFragment;
+        next.sn = 2;
+        next.level = 0;
+        next.start = 12;
+        next.duration = 6;
+        const details = new LevelDetails('');
+        details.live = false;
+        details.startSN = 0;
+        details.endSN = 2;
+        details.fragments = [previous, frag, next];
+        subtitleStreamController.levels = [{ details }];
+        subtitleStreamController.tracksBuffered = [[{ start: 0, end: 6 }]];
+        const load = sinon.stub(subtitleStreamController, 'loadFragment');
+
+        fail();
+        subtitleStreamController.doTick();
+
+        expect(load).to.have.been.calledOnce;
+        expect(load.firstCall.args[0]).to.equal(next);
+        expect(subtitleStreamController.tracksBuffered).to.deep.equal([
+          [{ start: 0, end: 6 }],
+        ]);
+      });
+
+      it('ignores a failure from a previously selected track', function () {
+        const current = new Fragment(PlaylistLevelType.SUBTITLE, '');
+        current.sn = frag.sn;
+        current.level = frag.level + 1;
+        subtitleStreamController.fragCurrent = current;
+
+        fail();
+
+        expect(subtitleStreamController.state).to.equal(State.FRAG_LOADING);
+        expect(subtitleStreamController.fragPrevious).to.equal(null);
+      });
+
+      it('does not restart loading after stopLoad', function () {
+        subtitleStreamController.stopLoad();
+
+        fail();
+
+        expect(subtitleStreamController.state).to.equal(State.STOPPED);
+      });
+
+      it('keeps loading when a non-final part fails', function () {
+        const part = new Part(
+          new AttrList({ DURATION: '3', URI: 'part0.vtt' }),
+          frag,
+          '',
+          0,
+        );
+
+        fail(part);
+
+        expect(subtitleStreamController.state).to.equal(State.FRAG_LOADING);
+        expect(subtitleStreamController.fragPrevious).to.equal(null);
+      });
+
+      it('returns to IDLE when the final known part fails', function () {
+        const part = new Part(
+          new AttrList({ DURATION: '6', URI: 'part0.vtt' }),
+          frag,
+          '',
+          0,
+        );
+
+        fail(part);
+
+        expect(subtitleStreamController.state).to.equal(State.IDLE);
+        expect(subtitleStreamController.tracksBuffered).to.deep.equal([[]]);
+      });
     });
 
     it('returns to IDLE for the final known LL-HLS part even when float accumulation makes its end one ULP short of frag.end (#8051)', function () {
