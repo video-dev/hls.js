@@ -123,6 +123,13 @@ const defaults = new VTTCue(0, 0, '');
 // 'middle' was changed to 'center' in the spec: https://github.com/w3c/webvtt/pull/244
 //  Safari doesn't yet support this change, but FF and Chrome do.
 const center = (defaults.align as string) === 'middle' ? 'middle' : 'center';
+// Position alignment values from WebVTT drafts before 2016, renamed in
+// w3c/webvtt#244 (middle -> center) and w3c/webvtt#273 (start/end -> line-left/line-right)
+const positionAlignValues: Record<string, PositionAlignSetting> = {
+  start: 'line-left',
+  middle: 'center',
+  end: 'line-right',
+};
 
 function parseCue(input: string, cue: VTTCue, regionList: Region[]) {
   // Remember the original input if we need to throw an error.
@@ -179,7 +186,8 @@ function parseCue(input: string, cue: VTTCue, regionList: Region[]) {
             if (vals.length === 2) {
               settings.alt('positionAlign', vals[1], [
                 'start',
-                center,
+                'middle',
+                'center',
                 'end',
                 'line-left',
                 'line-right',
@@ -224,6 +232,10 @@ function parseCue(input: string, cue: VTTCue, regionList: Region[]) {
             : 50;
     }
     cue.position = position;
+    const positionAlign = settings.get('positionAlign');
+    if (positionAlign) {
+      cue.positionAlign = positionAlignValues[positionAlign] || positionAlign;
+    }
   }
 
   function skipWhitespace() {

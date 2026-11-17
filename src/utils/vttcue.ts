@@ -39,6 +39,16 @@ export default (function () {
   ] as const;
   type Alignment = (typeof AllowedAlignments)[number];
 
+  // The current position alignment values, plus the old ones for compatibility
+  const AllowedPositionAlignments = [
+    'line-left',
+    'center',
+    'line-right',
+    'auto',
+    ...AllowedAlignments,
+  ] as const;
+  type PositionAlignment = (typeof AllowedPositionAlignments)[number];
+
   function isAllowedValue<T, A>(allowed: T, value: string): A | false {
     if (typeof value !== 'string') {
       return false;
@@ -67,6 +77,13 @@ export default (function () {
   function findAlignSetting(value: string) {
     return isAllowedValue<typeof AllowedAlignments, Alignment>(
       AllowedAlignments,
+      value,
+    );
+  }
+
+  function findPositionAlignSetting(value: string) {
+    return isAllowedValue<typeof AllowedPositionAlignments, PositionAlignment>(
+      AllowedPositionAlignments,
       value,
     );
   }
@@ -112,7 +129,7 @@ export default (function () {
     let _line: number | 'auto' = 'auto';
     let _lineAlign: Alignment = 'start';
     let _position = 50;
-    let _positionAlign: Alignment = 'middle';
+    let _positionAlign: PositionAlignment = 'middle';
     let _size = 50;
     let _align: Alignment = 'middle';
 
@@ -310,7 +327,7 @@ export default (function () {
           return _positionAlign;
         },
         set: function (value: string) {
-          const setting = findAlignSetting(value);
+          const setting = findPositionAlignSetting(value);
           if (!setting) {
             throw new SyntaxError(
               'An invalid or illegal string was specified.',
