@@ -122,6 +122,56 @@ describe('GapController', function () {
     });
   });
 
+  describe('fatal stall errors', function () {
+    const bufferInfo = BufferHelper.bufferedInfo([{ start: 0, end: 10 }], 0, 0);
+
+    function fatalErrors() {
+      return triggerSpy
+        .getCalls()
+        .filter((call) => call.args[0] === Events.ERROR && call.args[1].fatal)
+        .map((call) => call.args[1].details);
+    }
+
+    it('should trigger BUFFER_STALLED_ERROR only once while the playhead does not move', function () {
+      for (let i = 0; i < config.nudgeMaxRetry + 5; i++) {
+        gapController._tryNudgeBuffer(bufferInfo);
+      }
+      expect(fatalErrors()).to.deep.equal([ErrorDetails.BUFFER_STALLED_ERROR]);
+    });
+
+    it('should trigger BUFFER_SEEK_OVER_HOLE only once while the playhead does not move', function () {
+      const mockMedia = new MockMediaElement();
+      Object.assign(mockMedia, {
+        buffered: {
+          length: 2,
+          start: (i: number) => [0, 5.05][i],
+          end: (i: number) => [5, 10][i],
+        },
+      });
+      gapController.media = mockMedia as unknown as HTMLMediaElement;
+      for (let i = 0; i < config.nudgeMaxRetry + 5; i++) {
+        mockMedia.currentTime = 5;
+        expect(gapController._trySkipBufferHole(null)).to.be.above(5);
+      }
+      expect(fatalErrors()).to.deep.equal([ErrorDetails.BUFFER_SEEK_OVER_HOLE]);
+    });
+
+    it('should nudge again after media is attached again', function () {
+      for (let i = 0; i <= config.nudgeMaxRetry; i++) {
+        gapController._tryNudgeBuffer(bufferInfo);
+      }
+      expect(fatalErrors()).to.deep.equal([ErrorDetails.BUFFER_STALLED_ERROR]);
+
+      hls.trigger(Events.MEDIA_ATTACHED, { media, mediaSource });
+      triggerSpy.resetHistory();
+      gapController._tryNudgeBuffer(bufferInfo);
+      expect(triggerSpy).to.have.been.calledWithMatch(Events.ERROR, {
+        details: ErrorDetails.BUFFER_NUDGE_ON_STALL,
+        fatal: false,
+      });
+    });
+  });
+
   describe('_reportStall', function () {
     it('should report a stall with the current buffer length if it has not already been reported', function () {
       const bufferInfo = BufferHelper.bufferedInfo(
