@@ -1700,5 +1700,116 @@ describe('BaseStreamController', function () {
         hint,
       );
     });
+
+    describe('level switch after waiting for level details', function () {
+      let previous: MediaFragment;
+      let details: LevelDetails;
+      let controller;
+
+      beforeEach(function () {
+        previous = makeFrag(1, 0, 0.333666);
+        previous.level = 1;
+        previous.endPTS = previous.end;
+        previous.tagList = [['INF', '0.33367']];
+        details = new LevelDetails('');
+        details.startSN = 1;
+        details.endSN = 3;
+        details.fragments = [
+          makeFrag(1, 0, 0.33367),
+          makeFrag(2, 0.33367, 1.001),
+          makeFrag(3, 1.33467, 1.001),
+        ];
+        details.fragments.forEach((frag) => (frag.level = 0));
+        fragmentTracker.getState = (frag) =>
+          frag === previous ? FragmentState.OK : FragmentState.NOT_LOADED;
+        media.paused = false;
+        controller = baseStreamController as any;
+        controller.fragPrevious = previous;
+        controller.startFragRequested = false;
+      });
+
+      it('continues after a buffered fragment when startFragRequested has been reset', function () {
+        expect(
+          controller.getFragmentAtPosition(0.333666, details.edge, details),
+        ).to.equal(details.fragments[1]);
+      });
+
+      it('continues after a later buffered fragment', function () {
+        previous = makeFrag(2, 0.333666, 1.001);
+        previous.level = 1;
+        previous.endPTS = previous.end;
+        controller.fragPrevious = previous;
+
+        expect(
+          controller.getFragmentAtPosition(1.334666, details.edge, details),
+        ).to.equal(details.fragments[2]);
+      });
+
+      it('keeps the initial lookup strict without a previous fragment', function () {
+        controller.fragPrevious = null;
+
+        expect(
+          controller.getFragmentAtPosition(0.333666, details.edge, details),
+        ).to.equal(details.fragments[0]);
+      });
+
+      it('keeps the initial lookup strict when the previous fragment was evicted', function () {
+        fragmentTracker.getState = () => FragmentState.NOT_LOADED;
+
+        expect(
+          controller.getFragmentAtPosition(0.333666, details.edge, details),
+        ).to.equal(details.fragments[0]);
+      });
+
+      it('keeps the lookup strict while paused', function () {
+        media.paused = true;
+
+        expect(
+          controller.getFragmentAtPosition(0.333666, details.edge, details),
+        ).to.equal(details.fragments[0]);
+      });
+
+      it('keeps the lookup strict after a backward seek', function () {
+        controller.lastCurrentTime = 1;
+
+        expect(
+          controller.getFragmentAtPosition(0.333666, details.edge, details),
+        ).to.equal(details.fragments[0]);
+      });
+
+      it('keeps the lookup strict when loading parts', function () {
+        controller.loadingParts = true;
+
+        expect(
+          controller.getFragmentAtPosition(0.333666, details.edge, details),
+        ).to.equal(details.fragments[0]);
+      });
+
+      it('keeps the lookup strict near the playlist end', function () {
+        details.fragments[1].duration = 0.1;
+        details.fragments.length = 2;
+        details.endSN = 2;
+
+        expect(
+          controller.getFragmentAtPosition(0.333666, details.edge, details),
+        ).to.equal(details.fragments[0]);
+      });
+
+      it('respects a configured maxFragLookUpTolerance of 0', function () {
+        controller.config.maxFragLookUpTolerance = 0;
+
+        expect(
+          controller.getFragmentAtPosition(0.333666, details.edge, details),
+        ).to.equal(details.fragments[0]);
+      });
+
+      it('respects a configured maximum smaller than the rounding error', function () {
+        controller.config.maxFragLookUpTolerance = 0.000001;
+
+        expect(
+          controller.getFragmentAtPosition(0.333666, details.edge, details),
+        ).to.equal(details.fragments[0]);
+      });
+    });
   });
 });

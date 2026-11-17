@@ -51,6 +51,7 @@ export function findFragmentByPDT(
  * @param fragments - The array of candidate fragments
  * @param bufferEnd - The end of the contiguous buffered range the playhead is currently within
  * @param maxFragLookUpTolerance - The amount of time that a fragment's start/end can be within in order to be considered contiguous
+ * @param nextFragLookupTolerance - The tolerance for preferring the next fragment on level switch, capped by maxFragLookUpTolerance
  * @returns a matching fragment or null
  */
 export function findFragmentByPTS(
@@ -78,19 +79,24 @@ export function findFragmentByPTS(
   } else if (bufferEnd === 0 && fragments[0].start === 0) {
     fragNext = fragments[0];
   }
+  const nextLookupTolerance = Math.min(
+    nextFragLookupTolerance,
+    maxFragLookUpTolerance,
+  );
   // Prefer the next fragment if it's within tolerance
   if (
     fragNext &&
-    (((!fragPrevious || fragPrevious.level === fragNext.level) &&
-      fragmentWithinToleranceTest(
-        bufferEnd,
-        maxFragLookUpTolerance,
-        fragNext,
-      ) === 0) ||
+    (fragmentWithinToleranceTest(
+      bufferEnd,
+      fragPrevious && fragPrevious.level !== fragNext.level
+        ? nextLookupTolerance
+        : maxFragLookUpTolerance,
+      fragNext,
+    ) === 0 ||
       fragmentWithinFastStartSwitch(
         fragNext,
         fragPrevious,
-        Math.min(nextFragLookupTolerance, maxFragLookUpTolerance),
+        nextLookupTolerance,
       ))
   ) {
     return fragNext;
