@@ -500,20 +500,26 @@ export function adjustSliding(
     newDetails.startSN + newDetails.skippedSegments - oldDetails.startSN;
   const oldFragments = oldDetails.fragments;
   const advancedOrStable = delta >= 0;
+  // Relative to where the fragments already are: mergeDetails may have placed them, and re-adding the
+  // absolute start doubles it (alt-audio refreshed after a long pause then never loads again).
+  const newStart = newDetails.fragments[newDetails.skippedSegments]?.start ?? 0;
   let sliding = 0;
   if (advancedOrStable && delta < oldFragments.length) {
-    sliding = oldFragments[delta].start;
+    sliding = oldFragments[delta].start - newStart;
     logger?.log(
       `Aligning playlists based on SN ${newDetails.startSN} (diff: ${sliding})`,
     );
   } else if (advancedOrStable && newDetails.startSN === oldDetails.endSN + 1) {
-    sliding = oldDetails.fragmentEnd;
+    sliding = oldDetails.fragmentEnd - newStart;
     logger?.log(
       `Aligning playlists based on first/last SN ${newDetails.startSN} (diff: ${sliding})`,
     );
   } else if (advancedOrStable && matchingStableVariantOrRendition) {
     // align with expected position (updated playlist start sequence is past end sequence of last update)
-    sliding = oldDetails.fragmentStart + delta * newDetails.levelTargetDuration;
+    sliding =
+      oldDetails.fragmentStart +
+      delta * newDetails.levelTargetDuration -
+      newStart;
   } else if (!newDetails.skippedSegments && newDetails.fragmentStart === 0) {
     // align new start with old (playlist switch has a sequence with no overlap and should not be used for alignment)
     sliding = oldDetails.fragmentStart;

@@ -204,6 +204,17 @@ describe('LevelHelper Tests', function () {
       const actual = newPlaylist.fragments.map((f) => f.start);
       expect(actual).to.deep.equal([15, 20, 25]);
     });
+
+    it('does not shift a playlist that is already in place', function () {
+      const mainPlaylist = generatePlaylist([1, 2, 3, 4]);
+      const oldAudio = generatePlaylist([1, 2, 3]);
+      const newAudio = generatePlaylist([2, 3, 4]);
+      // A merge without known PTS positions the refresh, as after a pause longer than the playlist window
+      mergeDetails(oldAudio, newAudio, logger);
+      adjustSliding(mainPlaylist, newAudio, false);
+      const actual = newAudio.fragments.map((f) => f.start);
+      expect(actual).to.deep.equal([5, 10, 15]);
+    });
   });
 
   describe('mergeDetails', function () {
