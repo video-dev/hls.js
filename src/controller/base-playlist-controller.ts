@@ -172,6 +172,10 @@ export default class BasePlaylistController
       fragments.forEach((frag) => {
         frag?.setStart(frag.playlistOffset + offset);
       });
+      const { fragmentHint } = details;
+      if (fragmentHint) {
+        fragmentHint.setStart(fragmentHint.playlistOffset + offset);
+      }
     }
 
     // if current playlist is a live playlist, arm a timer to reload it

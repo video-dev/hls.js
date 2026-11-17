@@ -72,10 +72,13 @@ export function alignStream(
     // discontinuity sequence.
     alignMediaPlaylistByPDT(details, switchDetails, logger);
   }
-  if (!details.alignedSliding && !details.skippedSegments) {
-    // Try to align on sn so that we pick a better start fragment.
-    // Do not perform this on playlists with delta updates as this is only to align levels on switch
-    // and adjustSliding only adjusts fragments after skippedSegments.
+  if (
+    !details.alignedSliding &&
+    !details.skippedSegments &&
+    details.fragmentStart === (details.appliedTimelineOffset ?? 0)
+  ) {
+    // Use sequence numbers only before the playlist has acquired sliding.
+    // A configured timeline offset on a fresh playlist is not sliding.
     adjustSliding(switchDetails, details, false, logger);
   }
 }
