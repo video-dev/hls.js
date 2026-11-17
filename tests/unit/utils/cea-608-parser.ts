@@ -260,3 +260,83 @@ describe('CEA-608 Parser - screen snapshots', function () {
     expect(snapshotPenState.foreground).to.equal('red');
   });
 });
+
+describe('CEA-608 Parser - mid-row codes', function () {
+  function parse(...packets: [number, number[]][]): CaptionScreen[] {
+    const screens: CaptionScreen[] = [];
+    const outputFilter = {
+      dispatchCue() {},
+      newCue(startTime: number, endTime: number, screen: CaptionScreen) {
+        const copy = new CaptionScreen(screen.logger);
+        copy.copy(screen);
+        screens.push(copy);
+      },
+      reset() {},
+    };
+    const parser = new Cea608Parser(
+      1,
+      outputFilter as any,
+      outputFilter as any,
+    );
+    packets.forEach(([time, words]) => {
+      parser.addData(
+        time,
+        words.flatMap((w) => [w >> 8, w & 0xff]),
+      );
+    });
+    return screens;
+  }
+
+  it('shows a mid-row code as a space between words', function () {
+    // RCL, PAC row 15, "Hi", mid-row italics, "there", EDM, EOC; then EDM
+    const screens = parse(
+      [
+        1,
+        [
+          0x9420, 0x9420, 0x94e0, 0x94e0, 0xc8e9, 0x91ae, 0x91ae, 0xf468,
+          0xe5f2, 0xe580, 0x942c, 0x942c, 0x942f, 0x942f,
+        ],
+      ],
+      [3, [0x942c, 0x942c]],
+    );
+    expect(screens).to.have.length(1);
+    expect(screens[0].getDisplayText()).to.equal('Hi there');
+    const chars = screens[0].rows[14].chars;
+    expect(chars[1].uchar).to.equal('i');
+    expect(chars[1].penState.italics).to.equal(false);
+    expect(chars[2].uchar).to.equal(' ');
+    expect(chars[2].penState.italics).to.equal(true);
+    expect(chars[3].uchar).to.equal('t');
+    expect(chars[3].penState.italics).to.equal(true);
+  });
+
+  it('takes up one column for color changes too', function () {
+    // RCL, PAC row 15, "A", mid-row red, "B", EOC; then EDM
+    const screens = parse(
+      [1, [0x1420, 0x1460, 0x4180, 0x1128, 0x4280, 0x142f]],
+      [3, [0x142c]],
+    );
+    expect(screens[0].getDisplayText()).to.equal('A B');
+    const chars = screens[0].rows[14].chars;
+    expect(chars[1].penState.foreground).to.equal('red');
+    expect(chars[2].uchar).to.equal('B');
+    expect(chars[2].penState.foreground).to.equal('red');
+  });
+
+  it('replaces the character under the cursor with a space', function () {
+    // RDC (paint-on), PAC row 15, "ABC", PAC row 15 indent 0 (cursor back
+    // to column 0), mid-row italics; then EDM
+    const screens = parse(
+      [1, [0x1429, 0x1460, 0x4142, 0x4380, 0x1470, 0x112e]],
+      [3, [0x142c]],
+    );
+    const last = screens[screens.length - 1];
+    const chars = last.rows[14].chars;
+    expect(chars.slice(0, 3).map((c) => c.uchar)).to.deep.equal([
+      ' ',
+      'B',
+      'C',
+    ]);
+    expect(chars[0].penState.italics).to.equal(true);
+  });
+});
