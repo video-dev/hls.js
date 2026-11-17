@@ -117,6 +117,159 @@ describe('Fragment finders', function () {
       );
     });
 
+    [
+      [0, 1],
+      [1, 0],
+    ].forEach(([fromLevel, toLevel]) => {
+      describe(`level switch from ${fromLevel} to ${toLevel}`, function () {
+        // EXTINF:0.33367, 1.00100, 1.00100 (10, 30, 30 frames at 30000/1001)
+        const makeLevelFragments = (level: number) => [
+          makeMockFragment({ start: 0, duration: 0.33367, sn: 1, level }),
+          makeMockFragment({ start: 0.33367, duration: 1.001, sn: 2, level }),
+          makeMockFragment({ start: 1.33467, duration: 1.001, sn: 3, level }),
+        ];
+        let fragments: MediaFragment[];
+        let first: MediaFragment;
+        let second: MediaFragment;
+
+        beforeEach(function () {
+          fragments = makeLevelFragments(toLevel);
+          [first, second] = makeLevelFragments(fromLevel);
+          first.duration = first.endPTS = 0.333666;
+          first.tagList = [['INF', '0.33367']];
+          second.setStart(first.end);
+          second.endPTS = second.end;
+          second.tagList = [['INF', '1.001']];
+        });
+
+        it('prefers the next fragment after the first buffered fragment', function () {
+          expect(
+            findFragmentByPTS(first, fragments, 0.333666, tolerance),
+          ).to.equal(fragments[1]);
+          expect(binarySearchSpy).to.not.have.been.called;
+        });
+
+        it('prefers the next fragment after a later buffered fragment', function () {
+          expect(
+            findFragmentByPTS(second, fragments, 1.334666, tolerance),
+          ).to.equal(fragments[2]);
+          expect(binarySearchSpy).to.not.have.been.called;
+        });
+
+        it('falls back to binary search outside the next-fragment tolerance', function () {
+          expect(
+            findFragmentByPTS(second, fragments, 1.329669, tolerance),
+          ).to.equal(fragments[1]);
+          expect(binarySearchSpy).to.have.been.calledOnce;
+        });
+
+        it('chooses the fragment at the end of the buffer outside the maximum tolerance', function () {
+          expect(findFragmentByPTS(second, fragments, 1.32, 0.01)).to.equal(
+            fragments[1],
+          );
+        });
+
+        it('caps the next-fragment tolerance by maxFragLookUpTolerance', function () {
+          expect(
+            findFragmentByPTS(second, fragments, 1.334666, 0.000001, tolerance),
+          ).to.equal(fragments[1]);
+        });
+
+        it('disables the allowance when maxFragLookUpTolerance is 0', function () {
+          expect(
+            findFragmentByPTS(second, fragments, 1.334666, 0, tolerance),
+          ).to.equal(fragments[1]);
+        });
+
+        it('allows an explicit next-fragment tolerance larger than 1/200s', function () {
+          expect(
+            findFragmentByPTS(second, fragments, 1.32, tolerance, 0.02),
+          ).to.equal(fragments[2]);
+          expect(binarySearchSpy).to.not.have.been.called;
+        });
+
+        it('allows an explicit next-fragment tolerance of 0', function () {
+          expect(
+            findFragmentByPTS(second, fragments, 1.334666, tolerance, 0),
+          ).to.equal(fragments[1]);
+        });
+
+        it('does not advance across a gap larger than the maximum tolerance', function () {
+          fragments[2].setStart(1.43467);
+          expect(
+            findFragmentByPTS(second, fragments, 1.334666, 0.001),
+          ).to.equal(fragments[1]);
+        });
+
+        it('does not skip a short fragment found ahead of the buffer', function () {
+          const previous = makeMockFragment({
+            start: 4,
+            duration: 3.998,
+            sn: 1,
+            level: fromLevel,
+            endPTS: 7.998,
+          });
+          const fragments = [
+            makeMockFragment({ start: 4, duration: 4, sn: 1, level: toLevel }),
+            makeMockFragment({
+              start: 8,
+              duration: 0.002,
+              sn: 2,
+              level: toLevel,
+            }),
+            makeMockFragment({
+              start: 8.002,
+              duration: 4,
+              sn: 3,
+              level: toLevel,
+            }),
+            makeMockFragment({
+              start: 12.002,
+              duration: 4,
+              sn: 4,
+              level: toLevel,
+            }),
+          ];
+          expect(
+            findFragmentByPTS(previous, fragments, 7.998, tolerance),
+          ).to.equal(fragments[1]);
+        });
+
+        it('chooses the last fragment when there is no next fragment', function () {
+          const last = makeLevelFragments(fromLevel)[2];
+          expect(
+            findFragmentByPTS(last, fragments, 2.335666, tolerance),
+          ).to.equal(fragments[2]);
+        });
+      });
+    });
+
+    it('preserves fast-start switching based on the first playlist duration', function () {
+      // The parsed end is before both the EXTINF end and the next level's start.
+      const previous = makeMockFragment({
+        start: 0,
+        duration: 3.99,
+        sn: 1,
+        level: 0,
+        endPTS: 3.99,
+        tagList: [['INF', '4']],
+      });
+      const fragments = [
+        makeMockFragment({ start: 0, duration: 4.004, sn: 1, level: 1 }),
+        makeMockFragment({ start: 4.004, duration: 4, sn: 2, level: 1 }),
+        makeMockFragment({ start: 8.004, duration: 4, sn: 3, level: 1 }),
+      ];
+
+      expect(findFragmentByPTS(previous, fragments, 3.99, tolerance)).to.equal(
+        fragments[1],
+      );
+      expect(binarySearchSpy).to.not.have.been.called;
+
+      expect(findFragmentByPTS(previous, fragments, 3.99, 0.001)).to.equal(
+        fragments[0],
+      );
+    });
+
     it('uses BinarySearch to find a fragment if the subsequent one is not within tolerance', function () {
       const fragments = [
         mockFragments[0],

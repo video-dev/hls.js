@@ -1943,7 +1943,7 @@ export default class BaseStreamController
         bufferEnd > end - maxFragLookUpTolerance ||
         this.media?.paused ||
         this.loadingParts ||
-        !this.startFragRequested
+        (!this.startFragRequested && !fragPrevious)
           ? 0
           : maxFragLookUpTolerance;
       // Remove the tolerance if it would put the bufferEnd past the actual end of stream
