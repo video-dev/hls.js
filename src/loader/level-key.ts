@@ -125,10 +125,10 @@ export class LevelKey implements DecryptData {
 
     if (isFullSegmentEncryption(this.method)) {
       let iv = this.iv;
-      if (!iv) {
+      if (!iv && this.method !== 'AES-256-GCM') {
         if (typeof sn !== 'number') {
           // We are fetching decryption data for a initialization segment
-          // If the segment was encrypted with AES-128/256
+          // If the segment was encrypted with AES-128/256 (not GCM)
           // It must have an IV defined. We cannot substitute the Segment Number in.
           logger.warn(
             `missing IV for initialization segment with method="${this.method}" - compliance issue`,

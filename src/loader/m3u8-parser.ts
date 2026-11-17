@@ -629,8 +629,8 @@ export default class M3U8Parser {
                 levelkeys[levelKey.keyFormat] = levelKey;
               }
             } else {
-              logger.warn(
-                `[Keys] Ignoring unsupported EXT-X-KEY tag: "${value1}"${__USE_EME_DRM__ ? '' : ' (light build)'}`,
+              level.playlistParsingError = new Error(
+                `Unsupported EXT-X-KEY tag: "${value1}"${__USE_EME_DRM__ ? '' : ' (light build)'}`,
               );
             }
             break;
