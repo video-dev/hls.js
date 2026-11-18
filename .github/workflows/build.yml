@@ -24,7 +24,7 @@ jobs:
     steps:
       - name: extract tag
         id: extract_tag
-        uses: actions/github-script@v9
+        uses: actions/github-script@v9.0.0
         with:
           script: |
             const prefix = 'refs/tags/';
@@ -49,10 +49,10 @@ jobs:
     if: needs.config.outputs.tag || needs.config.outputs.isMainBranch == 'true'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7.0.1
 
       - name: cache node_modules
-        uses: actions/cache@v6
+        uses: actions/cache@v6.1.0
         env:
           cache-name: cache-node-modules
         with:
@@ -64,12 +64,12 @@ jobs:
             ${{ runner.os }}-
 
       - name: use Node.js
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@v7.1.0
         with:
           node-version-file: '.node-version'
 
       - name: download build
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v5.0.0
         with:
           name: build
 
@@ -104,7 +104,7 @@ jobs:
     steps:
       - name: draft release notes
         id: draft_release
-        uses: tjenkinson/release-drafter@349214e6b3b889d8b333c012cc61a1f1753baf40
+        uses: tjenkinson/release-drafter@hlsjs
         with:
           tag: ${{ needs.config.outputs.tag }}
           name: ${{ needs.config.outputs.tag }}
@@ -118,15 +118,15 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7.0.1
 
       - name: use Node.js
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@v7.1.0
         with:
           node-version-file: '.node-version'
 
       - name: download build
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v5.0.0
         with:
           name: build
 
@@ -135,7 +135,7 @@ jobs:
           zip -r dist.zip dist
 
       - name: upload assets to github release
-        uses: actions/upload-release-asset@v1
+        uses: actions/upload-release-asset@v1.0.2
         with:
           upload_url: ${{ needs.update_draft_release.outputs.upload_url }}
           asset_path: dist.zip
@@ -154,10 +154,10 @@ jobs:
     permissions:
       id-token: write
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7.0.1
 
       - name: cache node_modules
-        uses: actions/cache@v6
+        uses: actions/cache@v6.1.0
         env:
           cache-name: cache-node-modules
         with:
@@ -169,12 +169,12 @@ jobs:
             ${{ runner.os }}-
 
       - name: use Node.js
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@v7.1.0
         with:
           node-version-file: '.node-version'
 
       - name: download build
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v5.0.0
         with:
           name: build
 
