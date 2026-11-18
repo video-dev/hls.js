@@ -3199,6 +3199,64 @@ a{$bar}.mp4
       );
       expect(details.fragments[0].relurl).to.equal('a{$bar}.mp4');
     });
+    it('parses Media Playlist with a variable named "constructor"', function () {
+      const level = `#EXTM3U
+      #EXT-X-VERSION:1
+      #EXT-X-MEDIA-SEQUENCE:1
+      #EXT-X-TARGETDURATION:5
+      #EXT-X-DEFINE:NAME="constructor",VALUE="https://cdn1.example"
+      #EXTINF:4
+      {$constructor}/segment.ts
+      #EXTINF:4
+      2.mp4
+      #EXTINF:4
+      3.mp4`;
+      const details = M3U8Parser.parseLevelPlaylist(
+        level,
+        'http://example.com/hls/index.m3u8',
+        0,
+        PlaylistLevelType.MAIN,
+        0,
+        null,
+      );
+      expect(details.playlistParsingError).to.be.null;
+      expect(details.fragments.length).to.equal(3);
+      expect(details.variableList?.['constructor']).to.equal(
+        'https://cdn1.example',
+      );
+      expect(details.fragments[0].relurl).to.equal(
+        'https://cdn1.example/segment.ts',
+      );
+      expect(details.fragments[0].url).to.equal(
+        'https://cdn1.example/segment.ts',
+      );
+    });
+    it('fails to parse Media Playlist when variable reference is "toString"', function () {
+      const level = `#EXTM3U
+      #EXT-X-VERSION:1
+      #EXT-X-MEDIA-SEQUENCE:1
+      #EXT-X-TARGETDURATION:5
+      #EXTINF:4
+      a{$toString}.mp4
+      #EXTINF:4
+      2.mp4
+      #EXTINF:4
+      3.mp4`;
+      const details = M3U8Parser.parseLevelPlaylist(
+        level,
+        'http://example.com/hls/index.m3u8',
+        0,
+        PlaylistLevelType.MAIN,
+        0,
+        null,
+      );
+      expect(details.variableList, 'variableList').to.equal(null);
+      expectPlaylistParsingError(
+        details,
+        'Missing preceding EXT-X-DEFINE tag for Variable Reference: "toString"',
+      );
+      expect(details.fragments[0].relurl).to.equal('a{$toString}.mp4');
+    });
   });
 
   describe('Media Playlist Tag single occurance validation', function () {

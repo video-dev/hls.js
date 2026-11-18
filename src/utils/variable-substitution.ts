@@ -52,7 +52,7 @@ export function addVariableDefinition(
 ) {
   let variableList = parsed.variableList;
   if (!variableList) {
-    parsed.variableList = variableList = {};
+    parsed.variableList = variableList = Object.create(null);
   }
   let NAME: string;
   let VALUE;
@@ -97,7 +97,7 @@ export function importVariableDefinition(
   if (sourceVariableList && IMPORT in sourceVariableList) {
     let variableList = parsed.variableList;
     if (!variableList) {
-      parsed.variableList = variableList = {};
+      parsed.variableList = variableList = Object.create(null);
     }
     variableList[IMPORT] = sourceVariableList[IMPORT];
   } else {
