@@ -1888,7 +1888,7 @@ When set to `true`, key sessions are kept open when `loadSource()` is called aga
 
 ### `cmcd`
 
-When the `cmcd` object is defined, [Common Media Client Data (CMCD)](https://cdn.cta.tech/cta/media/media/resources/standards/pdfs/cta-5004-final.pdf)
+When the `cmcd` object is defined, [Common Media Client Data (CMCD)](https://wiki.svta.org/common-media-client-data/)
 data will be passed on all media requests (manifests, playlists, a/v segments, timed text). It's configuration values are:
 
 - `sessionId`: The CMCD session id. One will be automatically generated if none is provided.

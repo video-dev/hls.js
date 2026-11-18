@@ -57,7 +57,7 @@ function validateCmcdCustomData(data: Record<string, unknown>): boolean {
 
 /**
  * Controller to deal with Common Media Client Data (CMCD)
- * @see https://cdn.cta.tech/cta/media/media/resources/standards/pdfs/cta-5004-final.pdf
+ * @see https://wiki.svta.org/common-media-client-data/
  */
 export default class CMCDController implements ComponentAPI {
   private hls: Hls;
