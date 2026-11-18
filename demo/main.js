@@ -734,20 +734,25 @@ function loadSelectedStream() {
 
   hls.on(Hls.Events.ERROR, function (eventName, data) {
     console.warn('Error event:', data);
+    const escapedURL = url.replaceAll('<', '&lt;').replaceAll('>', '&gt;');
+    const code = (data.response && data.response.code) || 0;
+    const escapedResponse = ((data.response && data.response.text) || '')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;');
     switch (data.details) {
       case Hls.ErrorDetails.MANIFEST_LOAD_ERROR:
         try {
           $('#errorOut').html(
             'Cannot load <a href="' +
-              data.context.url +
+              encodeURI(data.context.url) +
               '">' +
-              url +
+              escapedURL +
               '</a><br>HTTP response code:' +
-              data.response.code +
+              code +
               ' <br>' +
-              data.response.text
+              escapedResponse
           );
-          if (data.response.code === 0) {
+          if (code === 0) {
             $('#errorOut').append(
               'This might be a CORS issue, consider installing <a href="https://chrome.google.com/webstore/detail/allow-control-allow-origi/nlfbmbojpeacfghkpbjhddihlkkiljbi">Allow-Control-Allow-Origin</a> Chrome Extension'
             );
@@ -755,11 +760,11 @@ function loadSelectedStream() {
         } catch (err) {
           $('#errorOut').html(
             'Cannot load <a href="' +
-              data.context.url +
+              encodeURI(data.context.url) +
               '">' +
-              url +
+              escapedURL +
               '</a><br>Response body: ' +
-              data.response.text
+              escapedResponse
           );
         }
         break;
