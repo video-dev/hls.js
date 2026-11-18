@@ -806,6 +806,63 @@ describe('EMEController', function () {
     });
   });
 
+  it('should finish cleanup on destroy when MediaKeySession.closed never settles', function () {
+    const clock = sinon.useFakeTimers();
+    setupEach({
+      emeEnabled: true,
+    });
+
+    emeController.onMediaAttached(Events.MEDIA_ATTACHED, {
+      media: media as any as HTMLMediaElement,
+    });
+
+    const keySession = new MediaKeySessionMock();
+    Object.defineProperty(keySession, 'closed', {
+      value: new Promise(() => {}),
+    });
+    const keySessionCloseSpy = sinon.stub(keySession, 'close').resolves();
+    const levelKey = getParsedLevelKey();
+    emeController.mediaKeySessions = [
+      {
+        keySystem: KeySystems.WIDEVINE,
+        mediaKeys: new MediaKeysMock(),
+        mediaKeysSession: keySession,
+        keyRequests: {},
+        keyStatuses: {},
+        createdFor: { levelKey, reason: 'playlist-key' },
+        initialized: false,
+      },
+    ];
+    emeController.destroy();
+
+    const cleanupPromise = EMEController.CDMCleanupPromise;
+    expect(cleanupPromise).to.be.a('Promise');
+    if (!cleanupPromise) {
+      clock.restore();
+      return;
+    }
+    let cleanedUp = false;
+    const cleanupDone = cleanupPromise.then(() => {
+      cleanedUp = true;
+    });
+    return clock
+      .tickAsync(999)
+      .then(() => {
+        expect(keySessionCloseSpy).callCount(1);
+        expect(cleanedUp).to.equal(false);
+        return clock.tickAsync(1);
+      })
+      .then(() => {
+        expect(cleanedUp).to.equal(true);
+        expect(media.setMediaKeys).calledWith(null);
+        return cleanupDone;
+      })
+      .finally(() => {
+        clock.restore();
+        EMEController.CDMCleanupPromise = undefined;
+      });
+  });
+
   it('should remove all media key sessions and remove all media key sessions when call destroy with persistent-license session type', function () {
     const reqMediaKsAccessSpy = sinon.spy(function () {
       return Promise.resolve({

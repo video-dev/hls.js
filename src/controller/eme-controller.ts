@@ -1926,7 +1926,26 @@ class EMEController extends Logger implements ComponentAPI {
             });
           })
           .then(() => mediaKeysSession.close())
-          .then(() => mediaKeysSession.closed)
+          .then(
+            () =>
+              new Promise<void>((resolve, reject) => {
+                // Some platforms (LG webOS 23) never settle `closed` after close() resolves
+                const timeoutId = self.setTimeout(() => {
+                  this.warn(`MediaKeySession.closed timeout`);
+                  resolve();
+                }, 1000);
+                Promise.resolve(mediaKeysSession.closed).then(
+                  () => {
+                    self.clearTimeout(timeoutId);
+                    resolve();
+                  },
+                  (error) => {
+                    self.clearTimeout(timeoutId);
+                    reject(error);
+                  },
+                );
+              }),
+          )
           // .then((reason: MediaKeySessionClosedReason) => {
           // "closed-by-application" | "hardware-context-reset" | "internal-error" | "release-acknowledged" | "resource-evicted";
           .catch((error) => {
