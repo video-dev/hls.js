@@ -34,8 +34,8 @@ class HevcVideoParser extends BaseVideoParser {
       return VideoSample;
     };
 
-    units.forEach((unit, index) => {
-      if (this.startsNewAccessUnit(VideoSample, track, unit, index)) {
+    units.forEach((unit) => {
+      if (this.startsNewAccessUnit(VideoSample, unit)) {
         this.pushAccessUnit(VideoSample as ParsedVideoSample, track);
         // 16..23 are IRAP (IDR/CRA/BLA) NAL types per H.265 Table 7-1.
         const isIrap = unit.type >= 16 && unit.type <= 23;
@@ -126,6 +126,14 @@ class HevcVideoParser extends BaseVideoParser {
             this.initVPS = unit.data;
           }
           track.vps = [unit.data];
+          if (!VideoSample) {
+            // The VPS can be the first NAL of an access unit. Open the
+            // pending sample here so the AU inherits this PES's PTS/DTS when
+            // parameter sets arrive in their own PES; the VPS itself is
+            // stored on the track, not appended to the sample.
+            VideoSample = createVideoSample(false);
+            push = false;
+          }
           break;
 
         // SPS
@@ -219,18 +227,10 @@ class HevcVideoParser extends BaseVideoParser {
 
   private startsNewAccessUnit(
     VideoSample: ParsedVideoSample | null,
-    track: DemuxedVideoTrack,
     unit: { type: number; data: Uint8Array },
-    nalIndex: number,
   ): boolean {
     if (!VideoSample) {
       return false;
-    }
-
-    // if new NAL units found and last sample still there, let's push ...
-    // this helps parsing streams with missing AUD (only do this if AUD never found)
-    if (!track.audFound && nalIndex === 0) {
-      return true;
     }
 
     // A sample can be opened by AU prefix NALs such as AUD/VPS/SPS/PPS/SEI
@@ -242,6 +242,7 @@ class HevcVideoParser extends BaseVideoParser {
     }
 
     const { type, data } = unit;
+
     // Per H.265 spec 7.4.2.4.4 the following NAL types must appear before
     // the first VCL of an access unit; seeing one after a complete picture
     // means a new AU is starting:
