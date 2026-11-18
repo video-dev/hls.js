@@ -45,6 +45,8 @@ Pull requests are welcome and pair well with bug reports and feature requests. H
 - Make sure your changes pass all the required build and test tasks using `npm run sanity-check`
 - Run functional integration tests locally using `npm run test:func`
 
+CI runs the functional tests on Sauce Labs and BrowserStack. For PRs from forks, a maintainer needs to approve the workflow run for each commit you push before it starts.
+
 ## Contact
 
 If you aren't already a member, consider joining video-dev on Slack https://www.video-dev.org/ and chatting with us in the `#hlsjs` channel.

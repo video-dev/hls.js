@@ -1,0 +1,46 @@
+name: PR
+
+# Uses pull_request_target so the Sauce Labs and BrowserStack secrets are
+# available to PRs from forks. Fork commits need approval via the `fork`
+# environment before anything runs.
+#
+# This workflow must never reference any other secret, and must never grant
+# more than read access, as it executes code from the PR.
+# Release secrets live in build.yml, which only runs for pushes.
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+
+permissions: {}
+
+concurrency:
+  group: 'pr:${{ github.event.pull_request.number }}'
+  cancel-in-progress: true
+
+jobs:
+  approve:
+    # required reviewers are configured on this environment,
+    # so every commit pushed to a fork PR needs approval
+    if: github.event.pull_request.head.repo.fork == true
+    environment: fork
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Approved ${{ github.event.pull_request.head.sha }}"
+
+  test:
+    needs: approve
+    if: ${{ !cancelled() && (needs.approve.result == 'success' || needs.approve.result == 'skipped') }}
+    # fork code can restore caches but not save them, so it can't poison
+    # caches that are later restored by privileged workflows
+    cache-mode: read
+    uses: ./.github/workflows/shared-test.yml
+    with:
+      # pinned to the event sha so pushes after approval can't change what runs
+      ref: ${{ github.event.pull_request.head.sha }}
+      # fork commits are gated by the approve job
+      allow-unsafe-pr-checkout: true
+    secrets:
+      SAUCE_USERNAME: ${{ secrets.SAUCE_USERNAME }}
+      SAUCE_ACCESS_KEY: ${{ secrets.SAUCE_ACCESS_KEY }}
+      BROWSERSTACK_USERNAME: ${{ secrets.BROWSERSTACK_USERNAME }}
+      BROWSERSTACK_ACCESS_KEY: ${{ secrets.BROWSERSTACK_ACCESS_KEY }}

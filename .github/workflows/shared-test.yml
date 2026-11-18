@@ -1,0 +1,337 @@
+name: Test
+
+# Shared build and test jobs, called by build.yml and pr.yml.
+# Only the Sauce Labs and BrowserStack secrets are accepted, so callers
+# can never hand any other secret to code that runs in here.
+
+on:
+  workflow_call:
+    inputs:
+      ref:
+        description: 'The ref to checkout'
+        type: string
+        required: true
+      allow-unsafe-pr-checkout:
+        description: 'Allow checking out fork PR code when triggered by pull_request_target. The caller is responsible for gating the run.'
+        type: boolean
+        required: false
+        default: false
+      tag:
+        description: 'The release tag being built, if any'
+        type: string
+        required: false
+        default: ''
+    # WARNING: untrusted code from PRs (including forks) runs in this workflow
+    # once approved (see pr.yml), so it can read, log or exfiltrate every secret
+    # declared here. Keep these to a minimum, and only add secrets that would not be
+    # a serious problem if leaked. Never add release or other privileged secrets.
+    secrets:
+      SAUCE_USERNAME:
+        required: true
+      SAUCE_ACCESS_KEY:
+        required: true
+      BROWSERSTACK_USERNAME:
+        required: true
+      BROWSERSTACK_ACCESS_KEY:
+        required: true
+
+permissions: {}
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref }}
+          fetch-depth: 0
+          persist-credentials: false
+          allow-unsafe-pr-checkout: ${{ inputs.allow-unsafe-pr-checkout }}
+
+      - name: check package-lock.json version
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const fs = require('fs');
+            if (
+              JSON.parse(fs.readFileSync('./package-lock.json', { encoding: 'utf8' }))
+                .lockfileVersion !== 2
+            ) {
+              throw new Error(
+                'Expecting package-lock.json version to be 2. Please make sure you are using npm 7.'
+              );
+            }
+
+      - name: cache node_modules
+        uses: actions/cache@v6
+        env:
+          cache-name: cache-node-modules
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-build-${{ env.cache-name }}-
+            ${{ runner.os }}-build-
+            ${{ runner.os }}-
+
+      - name: use Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: '.node-version'
+
+      - name: install
+        run: |
+          npm ci
+        env:
+          CI: true
+
+      - name: lint
+        run: |
+          npm run lint
+          npm run prettier:verify
+
+      - name: set version
+        run: |
+          ./scripts/set-package-version.sh
+        env:
+          CI: true
+          TAG: ${{ inputs.tag }}
+
+      - name: build
+        run: |
+          npm run build:ci
+          npm run docs
+          ./scripts/check-docs-built.sh
+
+          # check that hls.js doesn't error if requiring in node
+          # see https://github.com/video-dev/hls.js/pull/1642
+          node -e 'require("./" + require("./package.json").main)'
+        env:
+          CI: true
+
+      - name: check bundle size
+        run: |
+          npm run size:check
+        env:
+          CI: true
+
+      - name: upload build
+        uses: actions/upload-artifact@v4
+        with:
+          name: build
+          # version number is set in package.json so need to include that
+          path: |
+            package.json
+            package-lock.json
+            api-docs/**
+            dist/**
+
+  test_unit:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref }}
+          persist-credentials: false
+          allow-unsafe-pr-checkout: ${{ inputs.allow-unsafe-pr-checkout }}
+
+      - name: cache node_modules
+        uses: actions/cache@v6
+        env:
+          cache-name: cache-node-modules
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-build-${{ env.cache-name }}-
+            ${{ runner.os }}-build-
+            ${{ runner.os }}-
+
+      - name: use Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: '.node-version'
+
+      - name: download build
+        uses: actions/download-artifact@v5
+        with:
+          name: build
+
+      - name: install
+        run: |
+          npm ci
+        env:
+          CI: true
+
+      - name: run unit tests
+        run: |
+          npm run test:unit
+        env:
+          CI: true
+
+  test_functional_required:
+    needs: test_unit
+    runs-on: ubuntu-latest
+    name: test_functional_required (${{ matrix.config }})
+    strategy:
+      fail-fast: true
+      max-parallel: 8
+      matrix:
+        include:
+          - config: chrome-win_10
+            ua: chrome
+            os: Windows 10
+          - config: chrome-win_8-75.0
+            ua: chrome
+            os: Windows 8
+            uaVersion: '75.0'
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref }}
+          persist-credentials: false
+          allow-unsafe-pr-checkout: ${{ inputs.allow-unsafe-pr-checkout }}
+
+      - name: cache node_modules
+        uses: actions/cache@v6
+        env:
+          cache-name: cache-node-modules
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-build-${{ env.cache-name }}-
+            ${{ runner.os }}-build-
+            ${{ runner.os }}-
+
+      - name: use Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: '.node-version'
+
+      - name: download build
+        uses: actions/download-artifact@v5
+        with:
+          name: build
+
+      - name: start SauceConnect tunnel
+        uses: saucelabs/sauce-connect-action@cb88b508c6f9ff4d84490093733315dbd55de022 # v3
+        with:
+          username: ${{ secrets.SAUCE_USERNAME }}
+          accessKey: ${{ secrets.SAUCE_ACCESS_KEY }}
+          region: us-west-1
+          tunnelName: ${{ github.run_id }}-${{ matrix.config }}
+          retryTimeout: 5
+          proxyLocalhost: direct # sc4 was false
+
+      - name: install
+        run: |
+          npm ci
+        env:
+          CI: true
+
+      - name: run functional tests
+        run: |
+          npm run test:func
+          npm run test:func:light
+        env:
+          CI: true
+          SAUCE_TUNNEL_ID: ${{ github.run_id }}-${{ matrix.config }}
+          SAUCE_USERNAME: ${{ secrets.SAUCE_USERNAME }}
+          SAUCE_ACCESS_KEY: ${{ secrets.SAUCE_ACCESS_KEY }}
+          UA: ${{ matrix.ua }}
+          UA_VERSION: ${{ matrix.uaVersion }}
+          OS: ${{ matrix.os }}
+
+  test_functional_optional:
+    needs: test_functional_required
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    name: test_functional_optional (${{ matrix.config }})
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        include:
+          - config: safari-macOS_15
+            ua: safari
+            os: macOS 15
+          - config: chrome-macOS_14
+            ua: chrome
+            os: macOS 14
+          - config: firefox-macOS_15
+            ua: firefox
+            os: macOS 15
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref }}
+          persist-credentials: false
+          allow-unsafe-pr-checkout: ${{ inputs.allow-unsafe-pr-checkout }}
+
+      - name: cache node_modules
+        uses: actions/cache@v6
+        env:
+          cache-name: cache-node-modules
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-build-${{ env.cache-name }}-
+            ${{ runner.os }}-build-
+            ${{ runner.os }}-
+
+      - name: use Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: '.node-version'
+
+      - name: download build
+        uses: actions/download-artifact@v5
+        with:
+          name: build
+
+      - name: setup BrowserStack env
+        uses: browserstack/github-actions/setup-env@93aebce225b754566349151c0676b26b005e591b # v1.0.4
+        with:
+          username: ${{ secrets.BROWSERSTACK_USERNAME }}
+          access-key: ${{ secrets.BROWSERSTACK_ACCESS_KEY }}
+
+      - name: start BrowserStack Local
+        uses: browserstack/github-actions/setup-local@93aebce225b754566349151c0676b26b005e591b # v1.0.4
+        with:
+          local-testing: start
+          local-identifier: ${{ github.run_id }}-${{ matrix.config }}
+
+      - name: install
+        run: |
+          npm ci
+        env:
+          CI: true
+
+      - name: run functional tests
+        run: |
+          npm run test:func
+        env:
+          CI: true
+          BROWSERSTACK: 1
+          BROWSERSTACK_USERNAME: ${{ secrets.BROWSERSTACK_USERNAME }}
+          BROWSERSTACK_ACCESS_KEY: ${{ secrets.BROWSERSTACK_ACCESS_KEY }}
+          BROWSERSTACK_LOCAL_IDENTIFIER: ${{ github.run_id }}-${{ matrix.config }}
+          BROWSERSTACK_BUILD_ID: ${{ github.run_id }}-${{ matrix.config }}
+          UA: ${{ matrix.ua }}
+          UA_VERSION: ${{ matrix.uaVersion }}
+          OS: ${{ matrix.os }}
+
+      - name: stop BrowserStack Local
+        if: always()
+        uses: browserstack/github-actions/setup-local@93aebce225b754566349151c0676b26b005e591b # v1.0.4
+        with:
+          local-testing: stop
