@@ -3257,7 +3257,6 @@ a{$bar}.mp4
       );
       expect(details.fragments[0].relurl).to.equal('a{$toString}.mp4');
     });
-    });
   });
 
   describe('Media Playlist Tag single occurance validation', function () {
