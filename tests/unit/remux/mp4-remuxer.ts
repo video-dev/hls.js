@@ -135,6 +135,43 @@ describe('mp4-remuxer', function () {
       expect(result.video?.startPTS).to.be.closeTo(20 + 7200 / 90000, 0.001);
     });
 
+    it('anchors a session starting at playlist time 0 on video PTS so the first frame maps to 0', function () {
+      // B-frame encode: the first PTS sits one composition offset (6006 ticks) after the first DTS,
+      // and audio starts at the same PTS as video
+      const firstDts = 126000;
+      const cts = 6006;
+      const result = remuxFragment(
+        mp4Remuxer,
+        0,
+        makeVideoTrack(firstDts, cts, frames),
+        makeAudioTrack(firstDts + cts, 185),
+        0,
+      );
+      expect(result.initSegment?.initPTS).to.equal(firstDts + cts);
+      expect(result.video?.startPTS).to.equal(0);
+      expect(result.audio?.startPTS).to.equal(0);
+    });
+
+    it('anchors a session starting mid-stream on video DTS with the same composition offset (#7932)', function () {
+      const timeOffset = 20;
+      const firstDts = 126000 + timeOffset * 90000;
+      const cts = 6006;
+      const result = remuxFragment(
+        mp4Remuxer,
+        5,
+        makeVideoTrack(firstDts, cts, frames),
+        makeAudioTrack(firstDts + cts, 185),
+        timeOffset,
+      );
+      expect(result.initSegment?.initPTS).to.equal(
+        firstDts - timeOffset * 90000,
+      );
+      expect(result.video?.startPTS).to.be.closeTo(
+        timeOffset + cts / 90000,
+        0.001,
+      );
+    });
+
     it('anchors on video DTS after seeking (non-contiguous) into another discontinuity sequence', function () {
       remuxFragment(
         mp4Remuxer,
