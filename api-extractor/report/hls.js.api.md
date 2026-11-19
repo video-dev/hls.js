@@ -1241,6 +1241,18 @@ export const enum DecrypterAesMode {
     ctr = 1
 }
 
+// Warning: (ae-missing-release-tag) "DiscontinuityChangingData" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
+// @public (undocumented)
+export interface DiscontinuityChangingData {
+    // (undocumented)
+    encrypted: boolean;
+    // (undocumented)
+    frag: MediaFragment;
+    // (undocumented)
+    position: number;
+}
+
 // Warning: (ae-missing-release-tag) "DRMSystemConfiguration" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
 // @public (undocumented)
@@ -1630,6 +1642,8 @@ export enum Events {
     CUES_PARSED = "hlsCuesParsed",
     // (undocumented)
     DESTROYING = "hlsDestroying",
+    // (undocumented)
+    DISCONTINUITY_CHANGING = "hlsDiscontinuityChanging",
     // (undocumented)
     ERROR = "hlsError",
     // (undocumented)
@@ -2625,6 +2639,8 @@ export interface HlsListeners {
     [Events.CUES_PARSED]: (event: Events.CUES_PARSED, data: CuesParsedData) => void;
     // (undocumented)
     [Events.DESTROYING]: (event: Events.DESTROYING) => void;
+    // (undocumented)
+    [Events.DISCONTINUITY_CHANGING]: (event: Events.DISCONTINUITY_CHANGING, data: DiscontinuityChangingData) => void;
     // (undocumented)
     [Events.ERROR]: (event: Events.ERROR, data: ErrorData) => void;
     // (undocumented)
@@ -5036,6 +5052,7 @@ export type StreamControllerConfig = {
     testBandwidth: boolean;
     liveSyncMode?: 'edge' | 'buffered';
     startOnSegmentBoundary: boolean;
+    resetMediaSourcePerDiscontinuity: boolean;
     nextAudioTrackBufferFlushForwardOffset: number;
 };
 

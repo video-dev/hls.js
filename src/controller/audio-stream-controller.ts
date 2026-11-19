@@ -419,7 +419,11 @@ class AudioStreamController
       return;
     }
 
-    if (this.exceedsMaxBuffer(bufferInfo, maxBufLen, frag)) {
+    const mainFrag = this.mainFragLoading?.frag || this.mainAnchor;
+    if (
+      this.exceedsMaxBuffer(bufferInfo, maxBufLen, frag) ||
+      (mainFrag && frag.cc > mainFrag.cc)
+    ) {
       return;
     }
 
