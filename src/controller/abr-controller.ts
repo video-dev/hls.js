@@ -846,6 +846,7 @@ class AbrController extends Logger implements AbrComponentAPI {
 
     const ttfbEstimateSec = this.bwEstimator.getEstimateTTFB() / 1000;
     const levelsSkipped: number[] = [];
+    let fallbackLevel = -1;
     for (let i = maxAutoLevel; i >= minAutoLevel; i--) {
       const levelInfo = levels[i];
       const upSwitch = i > selectionBaseLevel;
@@ -926,6 +927,21 @@ class AbrController extends Logger implements AbrComponentAPI {
         }
       }
 
+      // MediaCapabilities "smooth" is a prediction rather than a capability reported
+      // by the platform (unlike "supported"), so a level it rejects is kept as a
+      // fallback instead of being dropped outright. It is only eligible when a
+      // hardware decoder is engaged ("powerEfficient"), which is the strongest
+      // signature of a false negative (https://github.com/video-dev/hls.js/issues/7917).
+      const decodingInfoResults =
+        levelInfo.supportedResult?.decodingInfoResults;
+      const notSmooth = !!decodingInfoResults?.some(
+        (info) => info.smooth === false,
+      );
+      const smoothFallback =
+        notSmooth &&
+        !!decodingInfoResults?.length &&
+        decodingInfoResults.every((info) => info.powerEfficient);
+
       // skip candidates which change codec-family or video-range,
       // and which decrease or increase frame-rate for up and down-switch respectfully
       if (
@@ -935,9 +951,7 @@ class AbrController extends Logger implements AbrComponentAPI {
         (!upSwitch &&
           currentFrameRate > 0 &&
           currentFrameRate < levelInfo.frameRate) ||
-        levelInfo.supportedResult?.decodingInfoResults?.some(
-          (info) => info.smooth === false,
-        )
+        (notSmooth && !smoothFallback)
       ) {
         if (!firstSelection || i !== minStartIndex) {
           levelsSkipped.push(i);
@@ -995,6 +1009,19 @@ class AbrController extends Logger implements AbrComponentAPI {
           (live && !this.bitrateTestDelay) ||
           fetchDuration < maxFetchDuration);
       if (canSwitchWithinTolerance) {
+        if (smoothFallback && (!firstSelection || i !== minStartIndex)) {
+          // Hold on to this level and keep looking for a level reported as smooth
+          // above the currently loaded one.
+          if (fallbackLevel === -1) {
+            fallbackLevel = i;
+          }
+          continue;
+        }
+        if (fallbackLevel !== -1 && !upSwitch) {
+          // No level reported as smooth is available above the current one;
+          // switch to the fallback instead of staying at a lower quality level.
+          break;
+        }
         const forcedAutoLevel = this.forcedAutoLevel;
         if (
           i !== loadLevel &&
@@ -1033,6 +1060,18 @@ class AbrController extends Logger implements AbrComponentAPI {
         // as we are looping from highest to lowest, this will return the best achievable quality level
         return i;
       }
+    }
+    if (fallbackLevel !== -1) {
+      // The platform reports no smooth candidate above the currently loaded
+      // level. Use the highest not smooth level with hardware decoding instead
+      // of capping playback below the configured quality limit (see #7917).
+      this.info(
+        `No smooth MediaCapabilities candidate available, falling back to level ${fallbackLevel}`,
+      );
+      if (firstSelection) {
+        this.firstSelection = fallbackLevel;
+      }
+      return fallbackLevel;
     }
     // not enough time budget even with quality level 0 ... rebuffering might happen
     return -1;

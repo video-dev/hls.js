@@ -16,6 +16,7 @@ import type {
   MediaAttributes,
   MediaPlaylist,
 } from '../../../src/types/media-playlist';
+import type { MediaDecodingInfo } from '../../../src/utils/mediacapabilities-helper';
 
 use(sinonChai);
 
@@ -200,6 +201,70 @@ describe('AbrController', function () {
         1000,
       );
       expect(abrController.nextAutoLevel).to.equal(2);
+    });
+  });
+
+  describe('MediaCapabilities not smooth fallback', function () {
+    const requiredBitrateForLevel3 = 836280 / 0.7 + 1;
+
+    function decodingInfo(
+      smooth: boolean,
+      powerEfficient: boolean,
+    ): MediaDecodingInfo {
+      const decodingInfoResult: MediaCapabilitiesDecodingInfo = {
+        supported: true,
+        smooth,
+        powerEfficient,
+        keySystemAccess: null,
+      };
+      return {
+        supported: true,
+        configurations: [],
+        decodingInfoResults: [decodingInfoResult],
+      };
+    }
+
+    beforeEach(function () {
+      setForwardBufferlength(sandbox, hls, 8);
+    });
+
+    it('switches to a not smooth level when no smooth level is available above the loaded one and decoding is power efficient', function () {
+      const levels = getSimpleLevels().slice(0, 3);
+      levels[2].supportedResult = decodingInfo(false, true);
+      (hls as any).levelController._levels = levels;
+      loadAndBufferFragment(
+        abrController,
+        1,
+        requiredBitrateForLevel3 / 8,
+        1000,
+      );
+      expect(abrController.nextAutoLevel).to.equal(2);
+    });
+
+    it('keeps a not smooth level excluded when decoding is not power efficient', function () {
+      const levels = getSimpleLevels().slice(0, 3);
+      levels[2].supportedResult = decodingInfo(false, false);
+      (hls as any).levelController._levels = levels;
+      loadAndBufferFragment(
+        abrController,
+        1,
+        requiredBitrateForLevel3 / 8,
+        1000,
+      );
+      expect(abrController.nextAutoLevel).to.equal(1);
+    });
+
+    it('prefers a smooth level above the loaded one over a not smooth level', function () {
+      const levels = getSimpleLevels().slice(0, 3);
+      levels[2].supportedResult = decodingInfo(false, true);
+      (hls as any).levelController._levels = levels;
+      loadAndBufferFragment(
+        abrController,
+        0,
+        requiredBitrateForLevel3 / 8,
+        1000,
+      );
+      expect(abrController.nextAutoLevel).to.equal(1);
     });
   });
 
