@@ -85,12 +85,23 @@ export default class Decrypter {
     iv: ArrayBuffer,
     aesMode: DecrypterAesMode,
     decryptRange?: { start: number; end: number },
+    progressive?: boolean,
   ): Promise<ArrayBuffer> {
     this.decryptRange = decryptRange;
-    if (this.useSoftware || decryptRange) {
+    // Software decryption carries the IV and padding over to the next chunk, the segment ends on flush()
+    const progressiveSoftware =
+      progressive &&
+      !decryptRange &&
+      aesMode === DecrypterAesMode.cbc &&
+      key.byteLength === 16;
+    if (this.useSoftware || decryptRange || progressiveSoftware) {
       return new Promise((resolve, reject) => {
         const dataView = ArrayBuffer.isView(data) ? data : new Uint8Array(data);
-        this.softwareDecrypt(dataView, key, iv, aesMode);
+        const result = this.softwareDecrypt(dataView, key, iv, aesMode);
+        if (progressiveSoftware) {
+          resolve(result || new ArrayBuffer(0));
+          return;
+        }
         const decryptResult = this.flush();
         if (decryptResult) {
           resolve(decryptResult.buffer);
