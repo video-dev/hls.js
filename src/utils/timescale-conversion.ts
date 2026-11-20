@@ -40,6 +40,16 @@ export function toMpegTsClockFromTimescale(
   return toTimescaleFromBase(baseTime, MPEG_TS_CLOCK_FREQ_HZ, 1 / srcScale);
 }
 
+export function copyTimestampOffsets(
+  timestampOffsets: TimestampOffset[],
+): TimestampOffset[] {
+  const copy: TimestampOffset[] = [];
+  for (const cc in timestampOffsets) {
+    copy[cc] = timestampOffsets[cc];
+  }
+  return copy;
+}
+
 export function timestampToString(timestamp: TimestampOffset): string {
   const { baseTime, timescale, trackId } = timestamp;
   return `${baseTime / timescale} (${baseTime}/${timescale}) trackId: ${trackId}`;

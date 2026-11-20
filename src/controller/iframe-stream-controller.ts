@@ -7,6 +7,7 @@ import { LoadStats } from '../loader/load-stats';
 import { PlaylistLevelType } from '../types/loader';
 import { BufferHelper } from '../utils/buffer-helper';
 import { timeRangesToString } from '../utils/time-ranges';
+import { copyTimestampOffsets } from '../utils/timescale-conversion';
 import type { Fragment, MediaFragment, Part } from '../loader/fragment';
 import type { LevelDetails } from '../loader/level-details';
 import type { FragLoadedData } from '../types/events';
@@ -25,7 +26,7 @@ export class IFrameStreamController extends StreamController {
   initDetails?: LevelDetails | null;
 
   setInitPts(initPTS: TimestampOffset[]) {
-    this.initPTS = initPTS.slice();
+    this.initPTS = copyTimestampOffsets(initPTS);
   }
 
   loadMediaAt(time: number, options: LoadMediaAtOptions) {
