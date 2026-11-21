@@ -50,6 +50,47 @@ function cuesFor(ttml: string): VTTCue[] {
 }
 
 describe('IMSC1 TTML parser', function () {
+  describe('prefixed TTML elements', function () {
+    const prefixed = (body: string, head: string = '') =>
+      `<?xml version="1.0" encoding="UTF-8"?>` +
+      `<tt:tt xmlns:tt="http://www.w3.org/ns/ttml" xmlns:tts="http://www.w3.org/ns/ttml#styling" xml:lang="en">` +
+      head +
+      `<tt:body><tt:div>${body}</tt:div></tt:body>` +
+      `</tt:tt>`;
+
+    it('reads cues from a document whose elements carry a prefix', function () {
+      const cues = cuesFor(
+        prefixed(`<tt:p begin="00:00:01.000" end="00:00:03.000">Hello</tt:p>`),
+      );
+      expect(cues).to.have.lengthOf(1);
+      expect(cues[0].startTime).to.equal(1);
+      expect(cues[0].endTime).to.equal(3);
+      expect(cues[0].text).to.equal('Hello');
+    });
+
+    it('applies prefixed styles and regions', function () {
+      const cues = cuesFor(
+        prefixed(
+          `<tt:p begin="0s" end="1s" style="s1" region="r1">Hello</tt:p>`,
+          `<tt:head>` +
+            `<tt:styling><tt:style xml:id="s1" tts:textAlign="left"/></tt:styling>` +
+            `<tt:layout><tt:region xml:id="r1" tts:displayAlign="after"/></tt:layout>` +
+            `</tt:head>`,
+        ),
+      );
+      expect(cues).to.have.lengthOf(1);
+      expect(cues[0].align).to.equal('left');
+      expect((cues[0] as any).displayAlign).to.equal('after');
+    });
+
+    it('breaks the line at a prefixed br', function () {
+      const cues = cuesFor(
+        prefixed(`<tt:p begin="0s" end="1s">a<tt:br/>b</tt:p>`),
+      );
+      expect(cues[0].text).to.equal('a\nb');
+    });
+  });
+
   it('reads a cue timed in seconds', function () {
     const cues = cuesFor(ttmlWith('1s', '3.5s'));
     expect(cues).to.have.lengthOf(1);

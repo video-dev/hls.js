@@ -48,7 +48,7 @@ export function parseIMSC1(
 function parseTTML(ttml: string, syncTime: number): Array<VTTCue> {
   const parser = new DOMParser();
   const xmlDoc = parser.parseFromString(ttml, 'text/xml');
-  const tt = xmlDoc.getElementsByTagName('tt')[0];
+  const tt = getElementsByLocalName(xmlDoc, 'tt')[0];
   if (!tt) {
     throw new Error('Invalid ttml');
   }
@@ -144,11 +144,22 @@ function getElementCollection(
   parentName,
   childName,
 ): Array<HTMLElement> {
-  const parent = fromElement.getElementsByTagName(parentName)[0];
+  const parent = getElementsByLocalName(fromElement, parentName)[0];
   if (parent) {
     return [].slice.call(parent.querySelectorAll(childName));
   }
   return [];
+}
+
+// Matches elements by local name, so TTML that puts its elements under a
+// prefix (`<tt:tt xmlns:tt="http://www.w3.org/ns/ttml">`, as EBU-TT-D does)
+// is found as well as TTML that uses a default namespace or none.
+// getElementsByTagName() compares the qualified name (`tt:tt`) instead.
+function getElementsByLocalName(
+  from: Document | Element,
+  localName: string,
+): HTMLCollectionOf<Element> {
+  return from.getElementsByTagNameNS('*', localName);
 }
 
 function collectionToDictionary(elementsWithId: Array<HTMLElement>): {
@@ -178,7 +189,7 @@ function getTextContent(element, trim): string {
 
 function collectText(element, trim): string {
   return [].slice.call(element.childNodes).reduce((str, node, i) => {
-    if (node.nodeName === 'br' && i) {
+    if (node.localName === 'br' && i) {
       return str + '\n';
     }
     if (node.childNodes?.length) {
