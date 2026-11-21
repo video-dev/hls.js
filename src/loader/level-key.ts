@@ -260,9 +260,13 @@ function getKeyIdFromPlayReadyKey(
 }
 
 function createInitializationVector(segmentNumber: number) {
+  // Big-endian, left-padded with zeros (RFC 8216, section 5.2). Bit shifts would truncate
+  // the sequence number to 32 bits, so take each byte arithmetically instead.
   const uint8View = new Uint8Array(16);
-  for (let i = 12; i < 16; i++) {
-    uint8View[i] = (segmentNumber >> (8 * (15 - i))) & 0xff;
+  let remaining = segmentNumber;
+  for (let i = 15; i >= 0 && remaining > 0; i--) {
+    uint8View[i] = remaining % 256;
+    remaining = Math.floor(remaining / 256);
   }
   return uint8View;
 }
