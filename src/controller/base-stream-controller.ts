@@ -313,7 +313,25 @@ export default class BaseStreamController
 
     const lastFragment =
       levelDetails.fragments[levelDetails.fragments.length - 1];
-    return this.fragmentTracker.isEndListAppended(lastFragment.type);
+    if (this.fragmentTracker.isEndListAppended(lastFragment.type)) {
+      return true;
+    }
+    if (
+      lastFragment.gap &&
+      this.fragmentTracker.getState(lastFragment) === FragmentState.PARTIAL
+    ) {
+      for (let i = levelDetails.fragments.length - 2; i >= 0; i--) {
+        const frag = levelDetails.fragments[i];
+        if (!frag.gap) {
+          return this.fragmentTracker.getState(frag) === FragmentState.OK;
+        }
+        if (this.fragmentTracker.getState(frag) !== FragmentState.PARTIAL) {
+          return false;
+        }
+      }
+      return true;
+    }
+    return false;
   }
 
   public getLevelDetails(): LevelDetails | undefined {

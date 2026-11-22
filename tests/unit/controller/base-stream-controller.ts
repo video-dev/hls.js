@@ -7,16 +7,20 @@ import { SOURCE_BUFFER_ERROR_NAME } from '../../../src/controller/buffer-control
 import { FragmentState } from '../../../src/controller/fragment-tracker';
 import BaseStreamControllerImpl from '../../../src/controller/stream-controller';
 import { ErrorDetails, ErrorTypes } from '../../../src/errors';
+import { Events } from '../../../src/events';
 import Hls from '../../../src/hls';
-import { Fragment } from '../../../src/loader/fragment';
+import { ElementaryStreamTypes, Fragment } from '../../../src/loader/fragment';
 import { LoadError } from '../../../src/loader/fragment-loader';
 import KeyLoader from '../../../src/loader/key-loader';
 import { LevelDetails } from '../../../src/loader/level-details';
 import { LevelKey } from '../../../src/loader/level-key';
+import { LoadStats } from '../../../src/loader/load-stats';
 import { PlaylistLevelType } from '../../../src/types/loader';
+import { ChunkMetadata } from '../../../src/types/transmuxer';
 import { BufferHelper } from '../../../src/utils/buffer-helper';
 import { TimeRangesMock } from '../../mocks/time-ranges.mock';
 import type BaseStreamController from '../../../src/controller/base-stream-controller';
+import type { FragmentTracker } from '../../../src/controller/fragment-tracker';
 import type { MediaFragment, Part } from '../../../src/loader/fragment';
 import type { ErrorData } from '../../../src/types/events';
 import type { BufferInfo } from '../../../src/utils/buffer-helper';
@@ -190,6 +194,262 @@ describe('BaseStreamController', function () {
       fragmentTracker.isEndListAppended = () => false;
       expect(baseStreamController._streamEnded(bufferInfo, levelDetails)).to.be
         .false;
+    });
+
+    describe('trailing gap fragments', function () {
+      let testHls: Hls | null = null;
+
+      afterEach(function () {
+        if (testHls) {
+          testHls.destroy();
+          testHls = null;
+        }
+      });
+
+      function createAudioFrag(
+        sn: number,
+        start: number,
+        duration: number,
+        options: { endList?: boolean; gap?: boolean; partial?: boolean } = {},
+      ): MediaFragment {
+        const frag = new Fragment(
+          PlaylistLevelType.AUDIO,
+          'https://example.test/',
+        ) as MediaFragment;
+        frag.level = 0;
+        frag.sn = sn;
+        frag.cc = 0;
+        frag.relurl = `seg_${sn + 1}.mp4`;
+        frag.setStart(start);
+        frag.duration = duration;
+        frag.endList = options.endList ?? false;
+        frag.gap = options.gap ?? false;
+        frag.setElementaryStreamInfo(
+          ElementaryStreamTypes.AUDIO,
+          start,
+          start + duration,
+          start,
+          start + duration,
+          options.partial,
+        );
+        return frag;
+      }
+
+      function createTrackerHarness(currentTime: number) {
+        let capturedTracker!: FragmentTracker;
+        let capturedCtrl!: BaseStreamControllerTestable;
+        class CapturingStreamController extends BaseStreamControllerImpl {
+          constructor(
+            hlsInstance: Hls,
+            trackerInstance: FragmentTracker,
+            keyLoaderInstance: KeyLoader,
+          ) {
+            super(hlsInstance, trackerInstance, keyLoaderInstance);
+            capturedTracker = trackerInstance;
+            capturedCtrl = this as unknown as BaseStreamControllerTestable;
+          }
+        }
+        testHls = new Hls({
+          streamController: CapturingStreamController,
+        });
+        capturedCtrl.media = {
+          currentTime,
+          duration: 0,
+          buffered: new TimeRangesMock(),
+        } as unknown as HTMLMediaElement;
+        return { hls: testHls, tracker: capturedTracker, ctrl: capturedCtrl };
+      }
+
+      function appendAudioFragment(
+        hlsInstance: Hls,
+        frag: MediaFragment,
+        bufferedRange: [number, number],
+      ) {
+        const timeRanges = new TimeRangesMock(bufferedRange);
+        hlsInstance.trigger(Events.FRAG_LOADED, {
+          frag,
+          part: null,
+          payload: new ArrayBuffer(0),
+          networkDetails: null,
+        });
+        hlsInstance.trigger(Events.BUFFER_APPENDED, {
+          type: 'audio',
+          parent: PlaylistLevelType.AUDIO,
+          frag,
+          part: null,
+          chunkMeta: new ChunkMetadata(
+            frag.level,
+            frag.sn,
+            1,
+            1024,
+            -1,
+            false,
+            frag.duration,
+          ),
+          timeRanges: { audio: timeRanges },
+        });
+        hlsInstance.trigger(Events.FRAG_BUFFERED, {
+          frag,
+          part: null,
+          stats: new LoadStats(),
+          id: PlaylistLevelType.AUDIO,
+        });
+      }
+
+      it('returns true when an elst-shifted 1-frame final segment is marked as a gap after a buffered segment', function () {
+        const { hls: hlsInstance, tracker, ctrl } = createTrackerHarness(358);
+        const frag89 = createAudioFrag(89, 356.949333, 4.010667);
+        const frag90 = createAudioFrag(90, 360.96, 0.021333, { endList: true });
+        const levelDetails = new LevelDetails(
+          'https://example.test/audio.m3u8',
+        );
+        levelDetails.live = false;
+        levelDetails.fragments = [frag89, frag90];
+
+        appendAudioFragment(hlsInstance, frag89, [352.896, 360.917333]);
+        appendAudioFragment(hlsInstance, frag90, [352.896, 360.938667]);
+
+        expect(frag90.gap).to.be.true;
+        expect(tracker.isEndListAppended(PlaylistLevelType.AUDIO)).to.be.false;
+        expect(tracker.getState(frag89)).to.equal(FragmentState.OK);
+        expect(tracker.getState(frag90)).to.equal(FragmentState.PARTIAL);
+
+        expect(
+          ctrl._streamEnded(
+            {
+              len: 2.938667,
+              start: 352.896,
+              end: 360.938667,
+              bufferedIndex: 0,
+              buffered: [{ start: 352.896, end: 360.938667 }],
+            },
+            levelDetails,
+          ),
+        ).to.be.true;
+      });
+
+      it('returns false after recoverMediaError preserves a trailing gap while playback is earlier in the stream', function () {
+        const { hls: hlsInstance, tracker, ctrl } = createTrackerHarness(50);
+        const frag12 = createAudioFrag(12, 48.128, 4.010667);
+        const frag89 = createAudioFrag(89, 356.949333, 4.010667);
+        const frag90 = createAudioFrag(90, 360.96, 0.021333, { endList: true });
+        const levelDetails = new LevelDetails(
+          'https://example.test/audio.m3u8',
+        );
+        levelDetails.live = false;
+        levelDetails.fragments = [frag12, frag89, frag90];
+
+        appendAudioFragment(hlsInstance, frag89, [352.896, 360.917333]);
+        appendAudioFragment(hlsInstance, frag90, [352.896, 360.938667]);
+
+        const preservedGaps = tracker.gapFragments();
+        tracker.removeAllFragments();
+        preservedGaps.forEach((gap) => tracker.addAsGap(gap));
+
+        appendAudioFragment(hlsInstance, frag12, [48.085, 52.096]);
+
+        expect(
+          ctrl._streamEnded(
+            {
+              len: 2.096,
+              start: 48.085,
+              end: 52.096,
+              bufferedIndex: 0,
+              buffered: [{ start: 48.085, end: 52.096 }],
+            },
+            levelDetails,
+          ),
+        ).to.be.false;
+      });
+
+      it('returns false when the preceding non-gap fragment is only partially buffered', function () {
+        const { hls: hlsInstance, tracker, ctrl } = createTrackerHarness(357);
+        const frag89 = createAudioFrag(89, 356.949333, 4.010667, {
+          partial: true,
+        });
+        const frag90 = createAudioFrag(90, 360.96, 0.021333, { endList: true });
+        const levelDetails = new LevelDetails(
+          'https://example.test/audio.m3u8',
+        );
+        levelDetails.live = false;
+        levelDetails.fragments = [frag89, frag90];
+
+        appendAudioFragment(hlsInstance, frag89, [356.907, 358.5]);
+        tracker.addAsGap(frag90);
+
+        expect(tracker.getState(frag89)).to.equal(FragmentState.PARTIAL);
+        expect(
+          ctrl._streamEnded(
+            {
+              len: 1.5,
+              start: 356.907,
+              end: 358.5,
+              bufferedIndex: 0,
+              buffered: [{ start: 356.907, end: 358.5 }],
+            },
+            levelDetails,
+          ),
+        ).to.be.false;
+      });
+
+      it('returns false before an explicit trailing EXT-X-GAP fragment is tracked', function () {
+        const { hls: hlsInstance, tracker, ctrl } = createTrackerHarness(358);
+        const frag89 = createAudioFrag(89, 356.949333, 4.010667);
+        const frag90 = createAudioFrag(90, 360.96, 4.01, {
+          endList: true,
+          gap: true,
+        });
+        const levelDetails = new LevelDetails(
+          'https://example.test/audio.m3u8',
+        );
+        levelDetails.live = false;
+        levelDetails.fragments = [frag89, frag90];
+
+        appendAudioFragment(hlsInstance, frag89, [352.896, 360.917333]);
+        expect(tracker.getState(frag90)).to.equal(FragmentState.NOT_LOADED);
+
+        expect(
+          ctrl._streamEnded(
+            {
+              len: 2.917333,
+              start: 352.896,
+              end: 360.917333,
+              bufferedIndex: 0,
+              buffered: [{ start: 352.896, end: 360.917333 }],
+            },
+            levelDetails,
+          ),
+        ).to.be.false;
+      });
+
+      it('returns true when multiple contiguous trailing segments are tracked gaps after a buffered segment', function () {
+        const { hls: hlsInstance, tracker, ctrl } = createTrackerHarness(354);
+        const frag88 = createAudioFrag(88, 352.938667, 4.010667);
+        const frag89 = createAudioFrag(89, 356.949333, 4.010667);
+        const frag90 = createAudioFrag(90, 360.96, 0.021333, { endList: true });
+        const levelDetails = new LevelDetails(
+          'https://example.test/audio.m3u8',
+        );
+        levelDetails.live = false;
+        levelDetails.fragments = [frag88, frag89, frag90];
+
+        appendAudioFragment(hlsInstance, frag88, [352.896, 356.907]);
+        tracker.addAsGap(frag89);
+        tracker.addAsGap(frag90);
+
+        expect(
+          ctrl._streamEnded(
+            {
+              len: 2.907,
+              start: 352.896,
+              end: 356.907,
+              bufferedIndex: 0,
+              buffered: [{ start: 352.896, end: 356.907 }],
+            },
+            levelDetails,
+          ),
+        ).to.be.true;
+      });
     });
   });
 
