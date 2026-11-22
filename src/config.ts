@@ -285,6 +285,7 @@ export type GapControllerConfig = {
   highBufferWatchdogPeriod: number;
   nudgeOffset: number;
   nudgeMaxRetry: number;
+  nudgeOnBufferFlush: boolean;
   nudgeOnVideoHole: boolean;
   skipBufferHolePadding: number;
 };
@@ -466,6 +467,7 @@ export const hlsDefaultConfig: HlsConfig = {
   highBufferWatchdogPeriod: 2, // used by gap-controller
   nudgeOffset: 0.1, // used by gap-controller
   nudgeMaxRetry: 3, // used by gap-controller
+  nudgeOnBufferFlush: false, // used by gap-controller
   nudgeOnVideoHole: true, // used by gap-controller
   skipBufferHolePadding: 0.1, // used by gap-controller
   liveSyncMode: 'edge', // used by stream-controller
