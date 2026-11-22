@@ -14,6 +14,13 @@
   "main": "./dist/hls.js",
   "module": "./dist/hls.mjs",
   "types": "./dist/hls.d.ts",
+  "typesVersions": {
+    "*": {
+      "light": [
+        "./dist/hls.light.d.ts"
+      ]
+    }
+  },
   "exports": {
     ".": {
       "import": "./dist/hls.mjs",
@@ -39,7 +46,7 @@
     "build:debug": "rollup --config --configType full --configType demo",
     "build:watch": "rollup --config --configType full --configType demo --watch",
     "build:types": "tsc --build tsconfig-lib.json && api-extractor run --local && npm run build:copy-types",
-    "build:copy-types": "cp ./dist/hls.d.ts ./dist/hls.d.mts && cp ./dist/hls.d.ts ./dist/hls.js.d.ts",
+    "build:copy-types": "cp ./dist/hls.d.ts ./dist/hls.d.mts && cp ./dist/hls.d.ts ./dist/hls.js.d.ts && node ./scripts/build-light-types.js",
     "dev": "run-p build:watch serve",
     "serve": "http-server -o /demo .",
     "size": "node ./scripts/dist-size.js",
