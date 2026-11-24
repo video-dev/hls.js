@@ -277,10 +277,11 @@ export default class BaseStreamController
       bufferedRanges &&
       bufferedRanges.length > 1
     ) {
-      // make sure bufferInfo accounts for any gaps
+      // make sure bufferInfo accounts for any gaps ahead of the playhead. Gaps behind it
+      // were already jumped and would otherwise be reported as a range starting before the edge.
       bufferInfo = BufferHelper.bufferedInfo(
         bufferedRanges,
-        bufferInfo.start,
+        Math.max(bufferInfo.start, this.media.currentTime),
         0,
       );
     }

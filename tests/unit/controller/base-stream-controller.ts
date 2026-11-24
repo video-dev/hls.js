@@ -171,6 +171,36 @@ describe('BaseStreamController', function () {
         .true;
     });
 
+    it('returns true if a gap smaller than maxBufferHole is behind the playhead', function () {
+      const levelDetails = levelDetailsWithEndSequenceVodOrLive(10);
+      media.currentTime = 49.9;
+      bufferInfo = BufferHelper.bufferedInfo(
+        [
+          { start: 16, end: 20.011 },
+          { start: 20.053, end: 50 },
+        ],
+        media.currentTime,
+        hlsDefaultConfig.maxBufferHole,
+      );
+      expect(baseStreamController._streamEnded(bufferInfo, levelDetails)).to.be
+        .true;
+    });
+
+    it('returns false if a gap smaller than maxBufferHole is ahead of the playhead', function () {
+      const levelDetails = levelDetailsWithEndSequenceVodOrLive(10);
+      media.currentTime = 18;
+      bufferInfo = BufferHelper.bufferedInfo(
+        [
+          { start: 16, end: 20.011 },
+          { start: 20.053, end: 50 },
+        ],
+        media.currentTime,
+        hlsDefaultConfig.maxBufferHole,
+      );
+      expect(baseStreamController._streamEnded(bufferInfo, levelDetails)).to.be
+        .false;
+    });
+
     it('returns true if parts are buffered for low latency content', function () {
       media.buffered = new TimeRangesMock([0, 1]);
       const levelDetails = levelDetailsWithEndSequenceVodOrLive(10);
