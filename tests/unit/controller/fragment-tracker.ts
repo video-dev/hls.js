@@ -10,9 +10,11 @@ import { ElementaryStreamTypes, Fragment } from '../../../src/loader/fragment';
 import { LoadStats } from '../../../src/loader/load-stats';
 import { PlaylistLevelType } from '../../../src/types/loader';
 import { ChunkMetadata } from '../../../src/types/transmuxer';
+import { userAgentChromeVersion } from '../../../src/utils/user-agent';
 import type { MediaFragment } from '../../../src/loader/fragment';
 import type {
   BufferAppendedData,
+  BufferFlushingData,
   FragBufferedData,
   FragLoadedData,
 } from '../../../src/types/events';
@@ -621,7 +623,128 @@ describe('FragmentTracker', function () {
       expect(fragmentTracker.gapFragments()).to.have.lengthOf(0);
     });
   });
+
+  describe('Chrome PTS overlap workaround (#6777)', function () {
+    let hls: Hls;
+    let fragmentTracker: FragmentTracker;
+    let flushes: BufferFlushingData[];
+
+    before(function () {
+      // The workaround only runs in Chrome
+      if (!userAgentChromeVersion()) {
+        this.skip();
+      }
+    });
+
+    beforeEach(function () {
+      hls = new Hls({});
+      // Use the instance's own tracker: a second tracker would share the same
+      // fragment objects, and removeFragment() in one clears their timing for the other.
+      fragmentTracker = (hls as any).coreComponents.filter(
+        (component) => component instanceof FragmentTracker,
+      )[0];
+      flushes = [];
+      hls.on(Events.BUFFER_FLUSHING, (event, data) => {
+        flushes.push(data);
+      });
+    });
+
+    afterEach(function () {
+      hls.destroy();
+    });
+
+    // Timing taken from a muxed MPEG-TS stream where each segment's audio
+    // starts ~0.04s before its video.
+    // sn 6 is buffered first, then sn 5 is appended in front of it (seek back).
+    it('does not flush when only audio of the next fragment starts before the appended video end', function () {
+      const next = createMockAVFragment(6, [11.84, 13.7813], [11.88, 13.84]);
+      triggerFragLoaded(hls, next);
+      hls.trigger(
+        Events.BUFFER_APPENDED,
+        createBufferAppendedData(
+          [{ startPTS: 11.88, endPTS: 13.84 }],
+          [{ startPTS: 11.84, endPTS: 13.7813 }],
+        ),
+      );
+      hls.trigger(Events.FRAG_BUFFERED, createFragBufferedData(next));
+
+      const appended = createMockAVFragment(5, [9.8347, 11.84], [9.88, 11.88]);
+      triggerFragLoaded(hls, appended);
+      hls.trigger(
+        Events.BUFFER_APPENDED,
+        createBufferAppendedData(
+          [{ startPTS: 9.88, endPTS: 13.84 }],
+          [{ startPTS: 9.8347, endPTS: 13.7813 }],
+        ),
+      );
+      hls.trigger(Events.FRAG_BUFFERED, createFragBufferedData(appended));
+
+      expect(flushes).to.have.lengthOf(0);
+      expect(fragmentTracker.getState(next)).to.equal(FragmentState.OK);
+    });
+
+    it('flushes forward video when the video of the next fragment overlaps the appended video end', function () {
+      const next = createMockAVFragment(6, [11.84, 13.7813], [11.82, 13.84]);
+      triggerFragLoaded(hls, next);
+      hls.trigger(
+        Events.BUFFER_APPENDED,
+        createBufferAppendedData(
+          [{ startPTS: 11.82, endPTS: 13.84 }],
+          [{ startPTS: 11.84, endPTS: 13.7813 }],
+        ),
+      );
+      hls.trigger(Events.FRAG_BUFFERED, createFragBufferedData(next));
+
+      const appended = createMockAVFragment(5, [9.8347, 11.84], [9.88, 11.88]);
+      triggerFragLoaded(hls, appended);
+      hls.trigger(
+        Events.BUFFER_APPENDED,
+        createBufferAppendedData(
+          [{ startPTS: 9.88, endPTS: 13.84 }],
+          [{ startPTS: 9.8347, endPTS: 13.7813 }],
+        ),
+      );
+      hls.trigger(Events.FRAG_BUFFERED, createFragBufferedData(appended));
+
+      expect(flushes).to.have.lengthOf(1);
+      expect(flushes[0].type).to.equal('video');
+      expect(flushes[0].startOffset).to.be.closeTo(11.884, 0.000001);
+      expect(flushes[0].endOffset).to.equal(Infinity);
+      expect(fragmentTracker.getState(next)).to.equal(FragmentState.NOT_LOADED);
+    });
+  });
 });
+
+// Fragment with independent audio and video timing. Like `updateFragPTSDTS`,
+// the fragment's startPTS/endPTS span both elementary streams.
+function createMockAVFragment(
+  sn: number,
+  audio: [number, number],
+  video: [number, number],
+): Fragment {
+  const startPTS = Math.min(audio[0], video[0]);
+  const endPTS = Math.max(audio[1], video[1]);
+  const frag = new Fragment(PlaylistLevelType.MAIN, '');
+  Object.assign(frag, { sn, level: 0, startPTS, endPTS });
+  frag.setStart(startPTS);
+  frag.duration = endPTS - startPTS;
+  frag.setElementaryStreamInfo(
+    ElementaryStreamTypes.AUDIO,
+    audio[0],
+    audio[1],
+    audio[0],
+    audio[1],
+  );
+  frag.setElementaryStreamInfo(
+    ElementaryStreamTypes.VIDEO,
+    video[0],
+    video[1],
+    video[0],
+    video[1],
+  );
+  frag.relurl = 'not-frag-hint';
+  return frag;
+}
 
 function triggerFragLoaded(hls: Hls, fragment: Fragment) {
   hls.trigger(Events.FRAG_LOADED, createFragLoadedData(fragment));

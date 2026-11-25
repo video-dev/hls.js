@@ -206,8 +206,8 @@ export class FragmentTracker implements ComponentAPI {
       // Flush forward buffer in Chrome when PTS overlap detected
       // Workaround https://github.com/video-dev/hls.js/issues/6777 (https://issues.chromium.org/u/1/issues/336839131)
       if (appendedFrag && appendedFrag !== frag && userAgentChromeVersion()) {
-        const endPTS = appendedFrag.endPTS;
-        const otherStartPTS = frag.startPTS;
+        const endPTS = appendedFrag.elementaryStreams.video?.endPTS;
+        const otherStartPTS = frag.elementaryStreams.video?.startPTS;
         if (endPTS && otherStartPTS && fragmentEntity.range.video) {
           const diff = otherStartPTS - endPTS;
           // overlap is no more than 1/10s
