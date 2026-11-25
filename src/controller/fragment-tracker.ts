@@ -165,12 +165,18 @@ export class FragmentTracker implements ComponentAPI {
     // Check if any flagged fragments have been unloaded
     // excluding anything newer than appendedPartSn
     const appendedPartSn = appendedPart?.fragment.sn || -1;
+    // Video timing for the Chrome overlap workaround below. Fragment startPTS/endPTS
+    // span all tracks, and audio often starts slightly before video in muxed MPEG-TS,
+    // which would look like a video overlap when there is none. Read before any
+    // removeFragment() call, which clears elementary stream info.
+    const appendedVideoEndPTS = appendedFrag?.elementaryStreams.video?.endPTS;
     Object.keys(this.fragments).forEach((key) => {
       const fragmentEntity = this.fragments[key];
       if (!fragmentEntity || !this.hls) {
         return;
       }
       const frag = fragmentEntity.body;
+      const otherVideoStartPTS = frag.elementaryStreams.video?.startPTS;
       if (appendedPartSn >= frag.sn) {
         return;
       }
@@ -206,8 +212,8 @@ export class FragmentTracker implements ComponentAPI {
       // Flush forward buffer in Chrome when PTS overlap detected
       // Workaround https://github.com/video-dev/hls.js/issues/6777 (https://issues.chromium.org/u/1/issues/336839131)
       if (appendedFrag && appendedFrag !== frag && userAgentChromeVersion()) {
-        const endPTS = appendedFrag.endPTS;
-        const otherStartPTS = frag.startPTS;
+        const endPTS = appendedVideoEndPTS;
+        const otherStartPTS = otherVideoStartPTS;
         if (endPTS && otherStartPTS && fragmentEntity.range.video) {
           const diff = otherStartPTS - endPTS;
           // overlap is no more than 1/10s
