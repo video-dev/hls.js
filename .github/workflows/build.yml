@@ -4,7 +4,8 @@ on:
   push:
     branches: [master]
     tags: ['v*']
-  pull_request:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
 
 permissions: {}
 
@@ -15,6 +16,7 @@ defaults:
 jobs:
   config:
     runs-on: ubuntu-latest
+    environment: pr-test-env
     concurrency:
       group: 'build:config:${{ github.ref }}'
       cancel-in-progress: true
@@ -353,6 +355,7 @@ jobs:
     needs: [config, test_unit]
     if: needs.config.outputs.canUseSauce == 'true'
     runs-on: ubuntu-latest
+    environment: pr-test-env
     concurrency:
       group: 'build:test_functional_required:${{ matrix.config }}:${{ github.ref }}'
       cancel-in-progress: true
@@ -428,6 +431,7 @@ jobs:
     needs: [config, test_functional_required]
     if: needs.config.outputs.canUseBrowserStack == 'true'
     runs-on: ubuntu-latest
+    environment: pr-test-env
     concurrency:
       group: 'build:test_functional_optional:${{ matrix.config }}:${{ github.ref }}'
       cancel-in-progress: true
