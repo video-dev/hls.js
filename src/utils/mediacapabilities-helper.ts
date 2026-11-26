@@ -216,6 +216,7 @@ function makeVideoConfigurations(level: Level): VideoConfiguration[] {
           framerate,
         };
         if (videoRange !== 'sdr') {
+          // TODO: Add `videoConfiguration.colorGamut` for Chrome - based on videoRange and codec(s).
           videoConfiguration.transferFunction = videoRange as TransferFunction;
         }
         return videoConfiguration;
