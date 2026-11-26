@@ -1,11 +1,14 @@
 import { expect, use } from 'chai';
 import sinon from 'sinon';
 import sinonChai from 'sinon-chai';
+import { SubtitleStreamController } from '../../../src/controller/subtitle-stream-controller';
 import SubtitleTrackController from '../../../src/controller/subtitle-track-controller';
 import { Events } from '../../../src/events';
 import Hls from '../../../src/hls';
 import { LevelDetails } from '../../../src/loader/level-details';
 import { LoadStats } from '../../../src/loader/load-stats';
+import M3U8Parser from '../../../src/loader/m3u8-parser';
+import { PlaylistLevelType } from '../../../src/types/loader';
 import { AttrList } from '../../../src/utils/attr-list';
 import { IMSC1_CODEC } from '../../../src/utils/imsc1-ttml-parser';
 import type {
@@ -736,5 +739,100 @@ describe('SubtitleTrackController', function () {
       expect((subtitleTrackController as any).canLoad).to.be.true;
       expect(loadCurrentTrackSpy).to.have.been.calledOnce;
     });
+  });
+});
+
+describe('Late subtitle delta responses', function () {
+  const url = 'https://example.com/subtitles.m3u8';
+  const parsePlaylist = (skip = 0) =>
+    M3U8Parser.parseLevelPlaylist(
+      [
+        '#EXTM3U',
+        '#EXT-X-TARGETDURATION:2',
+        '#EXT-X-MEDIA-SEQUENCE:100',
+        ...(skip ? [`#EXT-X-SKIP:SKIPPED-SEGMENTS=${skip}`] : []),
+        ...Array.from(
+          { length: 4 - skip },
+          (_, i) => `#EXTINF:2,\n${100 + skip + i}.vtt`,
+        ),
+      ].join('\n'),
+      url,
+      0,
+      PlaylistLevelType.SUBTITLE,
+      0,
+      null,
+    );
+
+  let hls: Hls;
+  let previous: LevelDetails;
+  let track;
+  let trackController;
+  let streamController;
+  let errors;
+  let updates;
+
+  beforeEach(function () {
+    hls = new Hls({ autoStartLoad: false, enableWorker: false });
+    previous = parsePlaylist();
+    track = { id: 0, groupId: 'subs', name: 'English', url, details: previous };
+    trackController = (hls as any).subtitleTrackController;
+    streamController = (hls as any).networkControllers.filter(
+      (controller) => controller instanceof SubtitleStreamController,
+    )[0];
+    trackController.tracksInGroup = [track];
+    streamController.levels = [{ id: 0, details: previous }];
+    streamController.mainDetails = previous;
+    errors = [];
+    updates = [];
+    hls.on(Events.ERROR, (_, data) => errors.push(data));
+    hls.on(Events.SUBTITLE_TRACK_UPDATED, (_, data) => updates.push(data));
+  });
+
+  afterEach(function () {
+    hls.destroy();
+  });
+
+  function select(id: number) {
+    trackController.trackId = id;
+    trackController.currentTrack = id === 0 ? track : null;
+    streamController.currentTrackId = id;
+  }
+
+  function respond(details: LevelDetails) {
+    hls.trigger(Events.SUBTITLE_TRACK_LOADED, {
+      id: 0,
+      groupId: 'subs',
+      details,
+      track,
+      stats: new LoadStats(),
+      networkDetails: null,
+      deliveryDirectives: null,
+    });
+  }
+
+  [-1, 1].forEach((id) => {
+    it(`ignores an unmerged delta after selecting subtitle track ${id}`, function () {
+      select(id);
+      const delta = parsePlaylist(2);
+      expect(delta.fragments[0]).to.equal(null);
+      respond(delta);
+      expect(errors).to.deep.equal([]);
+      expect(updates).to.deep.equal([]);
+      expect(track.details).to.equal(previous);
+      expect(streamController.levels[0].details).to.equal(previous);
+    });
+  });
+
+  it('merges a fresh delta after reselecting captions', function () {
+    select(-1);
+    respond(parsePlaylist(2));
+    select(0);
+    const resumed = parsePlaylist(2);
+    respond(resumed);
+    expect(errors).to.deep.equal([]);
+    expect(updates).to.have.lengthOf(1);
+    expect(resumed.fragments[0].sn).to.equal(100);
+    expect(resumed.fragments[0].start).to.equal(0);
+    expect(streamController.levels[0].details).to.equal(resumed);
   });
 });
