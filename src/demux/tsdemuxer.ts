@@ -691,6 +691,13 @@ class TSDemuxer implements Demuxer {
         data = appendUint8Array(aacOverFlow.sample.unit, data);
       } else {
         const frameOverflowBytes = sampleLength - frameMissingBytes;
+        if (data.length < frameMissingBytes) {
+          // the frame spans more than two PES: keep collecting its bytes
+          aacOverFlow.sample.unit.set(data, frameOverflowBytes);
+          aacOverFlow.missing = frameMissingBytes - data.length;
+          this.aacOverFlow = aacOverFlow;
+          return;
+        }
         aacOverFlow.sample.unit.set(
           data.subarray(0, frameMissingBytes),
           frameOverflowBytes,
